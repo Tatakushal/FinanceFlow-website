@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Subscriptions - Finance Flow</title>
+  <link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<div class="topbar">
+  <a href="../index.html" class="tb-logo"><div class="tb-logo-icon">&#9889;</div><div class="tb-logo-text">Finance<span>Flow</span></div></a>
+  <div class="tb-right"><a href="ai-chat.html" class="btn-tb-primary">Ask FlowAI</a></div>
+</div>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content page-in">
+    <div class="page-header">
+      <div class="page-title">Subscriptions</div>
+      <div class="page-sub">Track all recurring subscriptions in one place and optimize monthly spend.</div>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:22px;">
+      <div class="card-sm" style="text-align:center;">
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">Active Subscriptions</div>
+        <div id="subs-count" style="font-family:var(--fd);font-size:28px;font-weight:800;color:var(--primary);">0</div>
+      </div>
+      <div class="card-sm" style="text-align:center;">
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">Monthly Cost</div>
+        <div id="subs-monthly" style="font-family:var(--fd);font-size:28px;font-weight:800;color:var(--warn);">0</div>
+      </div>
+      <div class="card-sm" style="text-align:center;">
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">Yearly Cost</div>
+        <div id="subs-yearly" style="font-family:var(--fd);font-size:28px;font-weight:800;color:var(--accent);">0</div>
+      </div>
+      <div class="card-sm" style="text-align:center;">
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">Next Due</div>
+        <div id="subs-next" style="font-family:var(--fd);font-size:18px;font-weight:800;color:#fff;">-</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div style="font-family:var(--fd);font-size:18px;font-weight:800;color:#fff;margin-bottom:14px;">Add Subscription</div>
+      <div class="form-row">
+        <div class="fw"><label class="flbl">Subscription Name</label><input class="finput" id="s-name" placeholder="Example: Netflix, Spotify, Office 365"></div>
+        <div class="fw"><label class="flbl">Category</label>
+          <select class="finput" id="s-category">
+            <option>Streaming</option>
+            <option>Music</option>
+            <option>Cloud</option>
+            <option>Software</option>
+            <option>Learning</option>
+            <option>Utilities</option>
+            <option>Gaming</option>
+            <option>Fitness</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fw"><label class="flbl">Amount</label><input class="finput" id="s-amount" type="number" min="0" step="0.01" placeholder="0"></div>
+        <div class="fw"><label class="flbl">Billing Cycle</label>
+          <select class="finput" id="s-cycle">
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fw"><label class="flbl">Next Billing Date (optional)</label><input class="finput" id="s-next" type="date"></div>
+        <div class="fw"><label class="flbl">Auto Renew</label>
+          <select class="finput" id="s-renew">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+      </div>
+      <div class="fw"><label class="flbl">Notes (optional)</label><input class="finput" id="s-note" placeholder="Example: Family plan shared with 3 members"></div>
+      <button class="btn btn-p btn-full" onclick="addSubscription()">Add Subscription</button>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border);font-family:var(--fd);font-size:16px;font-weight:800;">Your Subscriptions</div>
+      <div id="subs-list"></div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="ff-toast"></div>
+
+<script src="../js/app.js"></script>
+<script>
+if (!FF.isLoggedIn()) location.href = 'signin.html';
+FF.initializeAppearance();
+buildSidebar('subs');
+
+function toNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function esc(v) {
+  return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function ensureSubscriptions() {
+  const d = FF.data;
+  if (!Array.isArray(d.subscriptions)) d.subscriptions = [];
+  FF.save(d);
+}
+
+function monthlyEquivalent(amount, cycle) {
+  const a = toNum(amount);
+  const c = String(cycle || 'monthly').toLowerCase();
+  if (c === 'yearly') return a / 12;
+  if (c === 'quarterly') return a / 3;
+  if (c === 'weekly') return a * 52 / 12;
+  return a;
+}
+
+function fmtDate(v) {
+  if (!v) return '-';
+  const dt = new Date(v);
+  if (Number.isNaN(dt.getTime())) return '-';
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function nextDueItem(subscriptions) {
+  const today = new Date();
+  const valid = subscriptions
+    .filter((s) => s.status !== 'inactive' && s.nextBillingDate)
+    .map((s) => ({ ...s, dueTs: new Date(s.nextBillingDate).getTime() }))
+    .filter((s) => Number.isFinite(s.dueTs) && s.dueTs >= today.getTime())
+    .sort((a, b) => a.dueTs - b.dueTs);
+  return valid[0] || null;
+}
+
+function resetForm() {
+  document.getElementById('s-name').value = '';
+  document.getElementById('s-amount').value = '';
+  document.getElementById('s-next').value = '';
+  document.getElementById('s-note').value = '';
+}
+
+function addSubscription() {
+  const name = document.getElementById('s-name').value.trim();
+  const category = document.getElementById('s-category').value;
+  const amount = toNum(document.getElementById('s-amount').value);
+  const cycle = document.getElementById('s-cycle').value;
+  const nextBillingDate = document.getElementById('s-next').value || '';
+  const autoRenew = document.getElementById('s-renew').value === 'yes';
+  const note = document.getElementById('s-note').value.trim();
+
+  if (!name || amount <= 0) {
+    toast('Enter subscription name and amount.');
+    return;
+  }
+
+  const d = FF.data;
+  if (!Array.isArray(d.subscriptions)) d.subscriptions = [];
+  d.subscriptions.unshift({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    name,
+    category,
+    amount,
+    cycle,
+    monthlyCost: monthlyEquivalent(amount, cycle),
+    nextBillingDate,
+    autoRenew,
+    status: 'active',
+    note,
+    createdAt: new Date().toISOString()
+  });
+  FF.save(d);
+  resetForm();
+  renderAll();
+  toast('Subscription added.');
+}
+
+function removeSubscription(id) {
+  const d = FF.data;
+  d.subscriptions = (d.subscriptions || []).filter((s) => Number(s.id) !== Number(id));
+  FF.save(d);
+  renderAll();
+}
+
+function toggleStatus(id) {
+  const d = FF.data;
+  d.subscriptions = (d.subscriptions || []).map((s) => {
+    if (Number(s.id) !== Number(id)) return s;
+    const status = s.status === 'inactive' ? 'active' : 'inactive';
+    return { ...s, status };
+  });
+  FF.save(d);
+  renderAll();
+}
+
+function renderSummary() {
+  const subs = FF.data.subscriptions || [];
+  const active = subs.filter((s) => s.status !== 'inactive');
+  const totalMonthly = active.reduce((sum, s) => sum + monthlyEquivalent(s.amount, s.cycle), 0);
+  const totalYearly = totalMonthly * 12;
+  const due = nextDueItem(active);
+
+  document.getElementById('subs-count').textContent = String(active.length);
+  document.getElementById('subs-monthly').textContent = FF.fmt(totalMonthly);
+  document.getElementById('subs-yearly').textContent = FF.fmt(totalYearly);
+  document.getElementById('subs-next').textContent = due ? `${due.name} · ${fmtDate(due.nextBillingDate)}` : '-';
+}
+
+function renderList() {
+  const subs = FF.data.subscriptions || [];
+  const el = document.getElementById('subs-list');
+  if (!subs.length) {
+    el.innerHTML = '<div style="padding:28px;color:var(--text-muted);text-align:center;">No subscriptions added yet.</div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="table-scroll"><table class="data-table"><thead><tr><th>Name</th><th>Category</th><th>Cycle</th><th>Next Due</th><th style="text-align:right;">Amount</th><th style="text-align:right;">Monthly Eq.</th><th></th></tr></thead><tbody>${
+    subs.map((raw) => {
+      const monthly = monthlyEquivalent(raw.amount, raw.cycle);
+      const isActive = raw.status !== 'inactive';
+      return `<tr>
+        <td>
+          <div style="font-weight:700;color:#fff;">${esc(raw.name)}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+            ${raw.autoRenew ? 'Auto-renew' : 'Manual renew'} · ${isActive ? 'Active' : 'Inactive'}
+          </div>
+          ${raw.note ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${esc(raw.note)}</div>` : ''}
+        </td>
+        <td style="color:var(--text-muted);">${esc(raw.category || 'Other')}</td>
+        <td style="color:var(--text-muted);text-transform:capitalize;">${esc(raw.cycle || 'monthly')}</td>
+        <td style="color:var(--text-muted);">${fmtDate(raw.nextBillingDate)}</td>
+        <td style="text-align:right;font-weight:800;color:#fff;">${FF.fmt(toNum(raw.amount))}</td>
+        <td style="text-align:right;font-weight:800;color:var(--primary);">${FF.fmt(monthly)}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="btn btn-s" style="padding:6px 10px;font-size:11px;margin-right:6px;" onclick="toggleStatus(${Number(raw.id)})">${isActive ? 'Pause' : 'Activate'}</button>
+          <button class="btn btn-s" style="padding:6px 10px;font-size:11px;" onclick="removeSubscription(${Number(raw.id)})">Remove</button>
+        </td>
+      </tr>`;
+    }).join('')
+  }</tbody></table></div>`;
+}
+
+function renderAll() {
+  renderSummary();
+  renderList();
+}
+
+ensureSubscriptions();
+renderAll();
+</script>
+</body>
+</html>

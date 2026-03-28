@@ -1,0 +1,10 @@
+{
+  "name": "financeflow-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "FinanceFlow static app with serverless FlowAI endpoint",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "openai": "^6.2.0"
+  }
+}

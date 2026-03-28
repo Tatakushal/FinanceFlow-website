@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Add Expense — Finance Flow</title><link rel="stylesheet" href="../css/app.css"></head>
+<body>
+<div class="topbar">
+  <a href="../index.html" class="tb-logo"><div class="tb-logo-icon">⚡</div><div class="tb-logo-text">Finance<span>Flow</span></div></a>
+  <div class="tb-right">
+    <a href="dashboard.html" class="tb-back">← Dashboard</a>
+    <span class="tb-title" id="step-title">Add Expense</span>
+  </div>
+</div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content page-in">
+    <!-- Type toggle -->
+    <div style="display:flex;gap:12px;margin-bottom:28px;">
+      <div style="flex:1;max-width:200px;padding:12px 20px;background:var(--warn-dim);border:2px solid var(--warn);border-radius:12px;text-align:center;font-size:14px;font-weight:700;color:var(--warn);">💸 Expense</div>
+      <a href="add-income.html" style="flex:1;max-width:200px;padding:12px 20px;background:var(--surface2);border:2px solid var(--border);border-radius:12px;text-align:center;font-size:14px;font-weight:700;color:var(--text-muted);text-decoration:none;">💰 Income</a>
+    </div>
+
+    <div class="add-tx-layout">
+      <!-- LEFT: numpad -->
+      <div class="numpad-section">
+        <div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;" id="step-sub">Step 1 — Enter Amount</div>
+        <div class="amt-display"><span class="amt-cur">₹</span><span class="amt-val" id="adisp">0</span></div>
+        <div class="numpad">
+          <div class="nkey" onclick="nk('1')">1</div><div class="nkey" onclick="nk('2')">2</div><div class="nkey" onclick="nk('3')">3</div>
+          <div class="nkey" onclick="nk('4')">4</div><div class="nkey" onclick="nk('5')">5</div><div class="nkey" onclick="nk('6')">6</div>
+          <div class="nkey" onclick="nk('7')">7</div><div class="nkey" onclick="nk('8')">8</div><div class="nkey" onclick="nk('9')">9</div>
+          <div class="nkey" onclick="nk('.')">.</div><div class="nkey" onclick="nk('0')">0</div><div class="nkey del" onclick="nd()">⌫</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: details -->
+      <div>
+        <!-- Category -->
+        <div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;margin-bottom:12px;">Category</div>
+        <div class="cat-grid" id="cgrid"></div>
+
+        <!-- Details form -->
+        <div class="card-sm">
+          <div class="fw"><label class="flbl">Description</label><input class="finput" id="desc" placeholder="e.g. Lunch, Amazon order…"></div>
+          <div class="form-row">
+            <div class="fw"><label class="flbl">Date</label><input class="finput" type="date" id="edate"></div>
+            <div class="fw"><label class="flbl">Payment</label>
+              <select class="finput" id="pay">
+                <option>UPI</option><option>Cash</option><option>Card</option><option>Net Banking</option><option>Wallet</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface3);border-radius:10px;margin-bottom:16px;">
+            <div><div style="font-size:14px;font-weight:600;color:#fff;">🔁 Recurring</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Repeat monthly (EMI / subscription)</div></div>
+            <button class="tog off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
+          </div>
+          <button class="btn btn-p btn-full" id="add-btn" onclick="addExp()">✓ Add Expense</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="ff-toast"></div>
+<script src="../js/app.js"></script>
+<script>
+if (!FF.isLoggedIn()) location.href = 'signin.html';
+buildSidebar('home');
+const CATS=[{n:'Food',i:'🍕'},{n:'Travel',i:'🚕'},{n:'Shopping',i:'🛍️'},{n:'Bills',i:'💡'},{n:'Health',i:'💊'},{n:'Leisure',i:'🎮'},{n:'Education',i:'📚'},{n:'Fuel',i:'⛽'},{n:'Entertainment',i:'🎬'},{n:'Personal',i:'✂️'},{n:'Fitness',i:'🏋️'},{n:'Other',i:'💫'}];
+let amt='', cat=null;
+document.getElementById('cgrid').innerHTML=CATS.map(c=>`<div class="cat-item" id="c-${c.n}" onclick="selCat('${c.n}','${c.i}')"><div class="cat-emoji">${c.i}</div><div class="cat-name">${c.n}</div></div>`).join('');
+document.getElementById('edate').value=new Date().toISOString().split('T')[0];
+function nk(k){if(k==='.'&&amt.includes('.'))return;if(k!=='.'&&amt==='0')amt='';if(amt.length>=9)return;amt+=k;if(!amt||amt==='.')amt='0';document.getElementById('adisp').textContent=amt;}
+function nd(){amt=amt.slice(0,-1)||'0';document.getElementById('adisp').textContent=amt;}
+function selCat(n,i){cat={n,i};document.querySelectorAll('.cat-item').forEach(el=>el.classList.remove('sel-e'));document.getElementById('c-'+n).classList.add('sel-e');}
+function addExp(){
+  const v=parseFloat(amt);
+  if(!v){toast('⚠️ Enter an amount first');return;}
+  if(!cat){toast('⚠️ Select a category');return;}
+  const desc=document.getElementById('desc').value.trim()||cat.n;
+  const pay=document.getElementById('pay').value;
+  FF.addTx({type:'expense',amt:v,cat:cat.n,ico:cat.i,name:desc,pay,clr:'#FF6B35'});
+  toast('✅ ₹'+v.toLocaleString('en-IN')+' added to '+cat.n);
+  setTimeout(()=>location.href='dashboard.html',800);
+}
+</script>
+</body></html>

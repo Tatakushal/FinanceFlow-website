@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Appearance — Finance Flow</title><link rel="stylesheet" href="../css/app.css"></head>
+<body>
+<div class="topbar">
+  <a href="../index.html" class="tb-logo"><div class="tb-logo-icon">⚡</div><div class="tb-logo-text">Finance<span>Flow</span></div></a>
+  <div class="tb-right"><a href="profile.html" class="tb-back">← Profile</a></div>
+</div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content page-in">
+    <div class="page-header">
+      <div class="page-title">🎨 Appearance</div>
+      <div class="page-sub">Customise how Finance Flow looks for you</div>
+    </div>
+    <div style="max-width:680px;">
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">Theme</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div class="theme-opt active" id="th-dark" onclick="selTheme('dark',this)">
+            <div style="height:56px;border-radius:8px;background:linear-gradient(135deg,#080C14,#0F1621);margin-bottom:8px;border:1px solid rgba(255,255,255,.1);"></div>
+            <div style="font-size:13px;font-weight:700;color:var(--primary);">Dark ✓</div>
+          </div>
+          <div class="theme-opt" id="th-light" onclick="selTheme('light',this)">
+            <div style="height:56px;border-radius:8px;background:linear-gradient(135deg,#F5F7FA,#E8EDF5);margin-bottom:8px;border:1px solid rgba(0,0,0,.08);"></div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-muted);">Light</div>
+          </div>
+          <div class="theme-opt" id="th-ocean" onclick="selTheme('ocean',this)">
+            <div style="height:56px;border-radius:8px;background:linear-gradient(135deg,#0A1628,#0D2140);margin-bottom:8px;border:1px solid rgba(61,127,255,.2);"></div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-muted);">Ocean</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">Accent Colour</div>
+        <div class="colour-dots">
+          <div class="colour-dot on" data-color="#00E5A0" style="background:#00E5A0;" onclick="selAccent('#00E5A0',this)" title="Green"></div>
+          <div class="colour-dot" data-color="#3D7FFF" style="background:#3D7FFF;" onclick="selAccent('#3D7FFF',this)" title="Blue"></div>
+          <div class="colour-dot" data-color="#A855F7" style="background:#A855F7;" onclick="selAccent('#A855F7',this)" title="Purple"></div>
+          <div class="colour-dot" data-color="#FF6B35" style="background:#FF6B35;" onclick="selAccent('#FF6B35',this)" title="Orange"></div>
+          <div class="colour-dot" data-color="#FFB800" style="background:#FFB800;" onclick="selAccent('#FFB800',this)" title="Gold"></div>
+          <div class="colour-dot" data-color="#FF3B5E" style="background:#FF3B5E;" onclick="selAccent('#FF3B5E',this)" title="Red"></div>
+          <div class="colour-dot" data-color="#00D4FF" style="background:#00D4FF;" onclick="selAccent('#00D4FF',this)" title="Cyan"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">Currency</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;" id="currency-group">
+          <div class="chip on" onclick="selChip(this,'currency')">₹ INR</div>
+          <div class="chip" onclick="selChip(this,'currency')">$ USD</div>
+          <div class="chip" onclick="selChip(this,'currency')">€ EUR</div>
+          <div class="chip" onclick="selChip(this,'currency')">£ GBP</div>
+          <div class="chip" onclick="selChip(this,'currency')">¥ JPY</div>
+          <div class="chip" onclick="selChip(this,'currency')">د.إ AED</div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">Language</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;" id="language-group">
+          <div class="chip on" onclick="selChip(this,'lang')">English</div>
+          <div class="chip" onclick="selChip(this,'lang')">हिन्दी</div>
+          <div class="chip" onclick="selChip(this,'lang')">தமிழ்</div>
+          <div class="chip" onclick="selChip(this,'lang')">বাংলা</div>
+          <div class="chip" onclick="selChip(this,'lang')">తెలుగు</div>
+          <div class="chip" onclick="selChip(this,'lang')">मराठी</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<style>
+.theme-opt{border:2px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;}
+.theme-opt.active{border-color:var(--primary);}
+.theme-opt:hover:not(.active){border-color:var(--border-light);}
+</style>
+<div class="toast" id="ff-toast"></div>
+<script src="../js/app.js"></script>
+<script>
+if (!FF.isLoggedIn()) location.href = 'signin.html';
+FF.initializeAppearance();
+buildSidebar('appearance');
+const d = FF.data;
+
+// Initialize active settings on page load
+function initializeSettings() {
+  // Apply saved theme and accent immediately
+  FF.applyTheme(d.appearance.theme);
+  document.documentElement.style.setProperty('--primary', d.appearance.accent);
+
+  // Set active theme
+  document.querySelectorAll('.theme-opt').forEach(el => {
+    const themeId = el.id.replace('th-', '');
+    if (themeId === d.appearance.theme) {
+      el.classList.add('active');
+      let label = el.querySelector('div:last-child').textContent;
+      if (!label.includes(' ✓')) {
+        el.querySelector('div:last-child').textContent = label + ' ✓';
+      }
+      el.querySelector('div:last-child').style.color = 'var(--primary)';
+    } else {
+      el.classList.remove('active');
+      el.querySelector('div:last-child').textContent = el.querySelector('div:last-child').textContent.replace(' ✓','');
+      el.querySelector('div:last-child').style.color = 'var(--text-muted)';
+    }
+  });
+
+  // Set active accent color - use data attribute for reliable comparison
+  document.querySelectorAll('.colour-dot').forEach(dot => {
+    dot.classList.remove('on');
+    if (dot.dataset.color === d.appearance.accent) {
+      dot.classList.add('on');
+    }
+  });
+
+  // Set active currency
+  document.querySelectorAll('#currency-group .chip').forEach(chip => {
+    chip.classList.remove('on');
+    if (chip.textContent.trim() === d.appearance.currency) {
+      chip.classList.add('on');
+    }
+  });
+
+  // Set active language
+  document.querySelectorAll('#language-group .chip').forEach(chip => {
+    chip.classList.remove('on');
+    if (chip.textContent.trim() === d.appearance.language) {
+      chip.classList.add('on');
+    }
+  });
+}
+
+// Call on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeSettings);
+} else {
+  initializeSettings();
+}
+
+function selTheme(t, el) {
+  document.querySelectorAll('.theme-opt').forEach(e => { 
+    e.classList.remove('active'); 
+    e.querySelector('div:last-child').style.color='var(--text-muted)'; 
+    e.querySelector('div:last-child').textContent = e.querySelector('div:last-child').textContent.replace(' ✓',''); 
+  });
+  el.classList.add('active'); 
+  el.querySelector('div:last-child').style.color='var(--primary)'; 
+  el.querySelector('div:last-child').textContent += ' ✓';
+  
+  // Save to data
+  d.appearance.theme = t;
+  FF.save(d);
+  
+  // Apply theme immediately
+  FF.applyTheme(t);
+  
+  toast('Theme: ' + t.charAt(0).toUpperCase()+t.slice(1));
+}
+
+function selAccent(c, el) { 
+  document.querySelectorAll('.colour-dot').forEach(d=>d.classList.remove('on')); 
+  el.classList.add('on');
+  
+  // Save to data
+  d.appearance.accent = c;
+  FF.save(d);
+  
+  // Apply accent color immediately
+  document.documentElement.style.setProperty('--primary', c);
+  
+  toast('Accent colour changed'); 
+}
+
+function selChip(el, group) { 
+  const parent = el.parentElement;
+  parent.querySelectorAll('.chip').forEach(c=>c.classList.remove('on')); 
+  el.classList.add('on');
+  
+  // Save to data
+  if (group === 'currency') {
+    const currency = el.textContent.trim();
+    d.appearance.currency = currency;
+    FF.save(d);
+    toast('Currency: ' + currency);
+  } else if (group === 'lang') {
+    const lang = el.textContent.trim();
+    d.appearance.language = lang;
+    FF.save(d);
+    
+    // Apply language immediately
+    FF.applyLanguage(lang);
+    
+    toast('Language: ' + lang);
+    
+    // Reload page after a short delay to apply translations everywhere
+    setTimeout(() => location.reload(), 500);
+  }
+}
+</script>
+</body></html>

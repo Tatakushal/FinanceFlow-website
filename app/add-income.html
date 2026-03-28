@@ -1,0 +1,65 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Add Income — Finance Flow</title><link rel="stylesheet" href="../css/app.css"></head>
+<body>
+<div class="topbar">
+  <a href="../index.html" class="tb-logo"><div class="tb-logo-icon">⚡</div><div class="tb-logo-text">Finance<span>Flow</span></div></a>
+  <div class="tb-right"><a href="dashboard.html" class="tb-back">← Dashboard</a><span class="tb-title">Add Income</span></div>
+</div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content page-in">
+    <div style="display:flex;gap:12px;margin-bottom:28px;">
+      <a href="add-expense.html" style="flex:1;max-width:200px;padding:12px 20px;background:var(--surface2);border:2px solid var(--border);border-radius:12px;text-align:center;font-size:14px;font-weight:700;color:var(--text-muted);text-decoration:none;">💸 Expense</a>
+      <div style="flex:1;max-width:200px;padding:12px 20px;background:var(--primary-dim);border:2px solid var(--primary);border-radius:12px;text-align:center;font-size:14px;font-weight:700;color:var(--primary);">💰 Income</div>
+    </div>
+    <div class="add-tx-layout">
+      <div class="numpad-section">
+        <div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;">Enter Amount</div>
+        <div class="amt-display"><span class="amt-cur" style="color:var(--primary);">₹</span><span class="amt-val" id="adisp" style="color:var(--primary);">0</span></div>
+        <div class="numpad">
+          <div class="nkey" onclick="nk('1')">1</div><div class="nkey" onclick="nk('2')">2</div><div class="nkey" onclick="nk('3')">3</div>
+          <div class="nkey" onclick="nk('4')">4</div><div class="nkey" onclick="nk('5')">5</div><div class="nkey" onclick="nk('6')">6</div>
+          <div class="nkey" onclick="nk('7')">7</div><div class="nkey" onclick="nk('8')">8</div><div class="nkey" onclick="nk('9')">9</div>
+          <div class="nkey" onclick="nk('.')">.</div><div class="nkey" onclick="nk('0')">0</div><div class="nkey del" onclick="nd()">⌫</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;margin-bottom:12px;">Income Source</div>
+        <div class="cat-grid">
+          <div class="cat-item sel-i" id="c-Salary" onclick="sc('Salary','💼',this)"><div class="cat-emoji">💼</div><div class="cat-name">Salary</div></div>
+          <div class="cat-item" id="c-Freelance" onclick="sc('Freelance','💻',this)"><div class="cat-emoji">💻</div><div class="cat-name">Freelance</div></div>
+          <div class="cat-item" id="c-Investment" onclick="sc('Investment','📈',this)"><div class="cat-emoji">📈</div><div class="cat-name">Investment</div></div>
+          <div class="cat-item" id="c-Rental" onclick="sc('Rental','🏠',this)"><div class="cat-emoji">🏠</div><div class="cat-name">Rental</div></div>
+          <div class="cat-item" id="c-Business" onclick="sc('Business','🏪',this)"><div class="cat-emoji">🏪</div><div class="cat-name">Business</div></div>
+          <div class="cat-item" id="c-Gift" onclick="sc('Gift','🎁',this)"><div class="cat-emoji">🎁</div><div class="cat-name">Gift</div></div>
+          <div class="cat-item" id="c-Bonus" onclick="sc('Bonus','🎯',this)"><div class="cat-emoji">🎯</div><div class="cat-name">Bonus</div></div>
+          <div class="cat-item" id="c-Other" onclick="sc('Other','💫',this)"><div class="cat-emoji">💫</div><div class="cat-name">Other</div></div>
+        </div>
+        <div class="card-sm">
+          <div class="fw"><label class="flbl">Description (optional)</label><input class="finput" id="desc" placeholder="e.g. May Salary, Project payment…"></div>
+          <div class="fw" style="margin-bottom:16px;"><label class="flbl">Date</label><input class="finput" type="date" id="idate"></div>
+          <button class="btn btn-full" style="background:var(--primary);color:#000;box-shadow:0 4px 16px var(--primary-glow);" onclick="addInc()">✓ Add Income</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="ff-toast"></div>
+<script src="../js/app.js"></script>
+<script>
+if (!FF.isLoggedIn()) location.href = 'signin.html';
+buildSidebar('home');
+let amt='', cat={n:'Salary',i:'💼'};
+document.getElementById('idate').value=new Date().toISOString().split('T')[0];
+function nk(k){if(k==='.'&&amt.includes('.'))return;if(k!=='.'&&amt==='0')amt='';if(amt.length>=9)return;amt+=k;if(!amt||amt==='.')amt='0';document.getElementById('adisp').textContent=amt;}
+function nd(){amt=amt.slice(0,-1)||'0';document.getElementById('adisp').textContent=amt;}
+function sc(n,i,el){cat={n,i};document.querySelectorAll('.cat-item').forEach(c=>c.classList.remove('sel-i'));el.classList.add('sel-i');}
+function addInc(){
+  const v=parseFloat(amt);
+  if(!v){toast('⚠️ Enter an amount');return;}
+  const desc=document.getElementById('desc').value.trim()||cat.n;
+  FF.addTx({type:'income',amt:v,cat:cat.n,ico:cat.i,name:desc,pay:'Bank',clr:'#00E5A0'});
+  toast('✅ ₹'+v.toLocaleString('en-IN')+' income added!');
+  setTimeout(()=>location.href='dashboard.html',800);
+}
+</script>
+</body></html>

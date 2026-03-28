@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Dashboard — Finance Flow</title><link rel="stylesheet" href="../css/app.css"></head>
+<body>
+<div class="topbar">
+  <a href="../index.html" class="tb-logo"><div class="tb-logo-icon">⚡</div><div class="tb-logo-text">Finance<span>Flow</span></div></a>
+  <div class="tb-right">
+    <div class="tb-user">
+      <span id="greet-name">Rahul</span>
+      <a href="profile.html" class="tb-avatar">😊</a>
+    </div>
+  </div>
+</div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content page-in">
+    <!-- Balance Hero -->
+    <div class="balance-hero">
+      <div class="balance-label">Total Balance</div>
+      <div class="balance-amount" id="bal">₹0</div>
+      <div class="balance-growth" id="bal-growth">Start adding transactions to see insights</div>
+      <div class="balance-cols">
+        <div class="balance-col"><div class="balance-col-label">Income This Month</div><div class="balance-col-value" style="color:var(--primary);" id="tot-inc">₹0</div></div>
+        <div class="balance-col"><div class="balance-col-label">Spent This Month</div><div class="balance-col-value" style="color:var(--warn);" id="tot-sp">₹0</div></div>
+        <div class="balance-col"><div class="balance-col-label">Saved</div><div class="balance-col-value" style="color:var(--accent);" id="tot-sv">₹0</div></div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <a href="add-expense.html" style="flex:1;background:var(--primary);border-radius:14px;padding:18px 20px;text-decoration:none;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px var(--primary-glow);">
+        <span style="font-size:26px;">➕</span><div><div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#000;">Add Expense</div><div style="font-size:12px;color:rgba(0,0,0,.6);">Track what you spend</div></div>
+      </a>
+      <a href="add-income.html" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;text-decoration:none;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:26px;">💰</span><div><div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;">Add Income</div><div style="font-size:12px;color:var(--text-muted);">Log salary or earnings</div></div>
+      </a>
+      <a href="reports.html" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;text-decoration:none;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:26px;">📊</span><div><div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;">Reports</div><div style="font-size:12px;color:var(--text-muted);">Charts &amp; analysis</div></div>
+      </a>
+      <a href="ai-chat.html" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;text-decoration:none;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:26px;">🤖</span><div><div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;">FlowAI</div><div style="font-size:12px;color:var(--text-muted);">Ask your AI advisor</div></div>
+      </a>
+    </div>
+
+    <div class="grid-2" style="gap:28px;">
+      <!-- Left: Recent Transactions -->
+      <div>
+        <div class="sec-hdr"><span class="sec-ttl">Recent Transactions</span><a href="transactions.html" class="sec-lnk">See all →</a></div>
+        <div class="card-sm" id="recent-txs"></div>
+      </div>
+      <!-- Right: Budgets -->
+      <div>
+        <div class="sec-hdr"><span class="sec-ttl">Budget Rings</span><a href="reports.html" class="sec-lnk">View all →</a></div>
+        <div class="card-sm">
+          <div id="rings" class="rings-grid"></div>
+        </div>
+        <!-- AI Insight -->
+        <a href="ai-chat.html" id="ai-insight-card" style="display:block;margin-top:16px;background:linear-gradient(135deg,rgba(61,127,255,0.1),rgba(0,229,160,0.05));border:1px solid rgba(61,127,255,.2);border-radius:14px;padding:16px;text-decoration:none;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;"></div>
+            <span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;">FlowAI Insight</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--accent);">Ask more →</span>
+          </div>
+          <div style="font-size:14px;color:var(--text);line-height:1.65;" id="ai-insight-text">Add your first transactions to get personalised AI insights ✨</div>
+        </a>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="ff-toast"></div>
+<script src="../js/app.js"></script>
+<script>
+if (!FF.isLoggedIn()) location.href = 'signin.html';
+FF.initializeAppearance();
+const u = FF.getUser(), d = FF.data, t = FF.getTotals();
+document.getElementById('greet-name').textContent = u?.name?.split(' ')[0] || 'there';
+document.getElementById('tot-inc').textContent = FF.fmt(t.income);
+document.getElementById('tot-sp').textContent = FF.fmt(t.spent);
+document.getElementById('tot-sv').textContent = FF.fmt(t.saved);
+document.getElementById('bal').textContent = FF.fmt(Math.max(0, t.saved));
+if (t.income > 0) {
+  document.getElementById('bal-growth').textContent = '↑ Saving ' + t.rate + '% of income this month';
+  document.getElementById('ai-insight-text').textContent = t.spent > 0
+    ? 'You\'ve spent ' + FF.fmt(t.spent) + ' and saved ' + t.rate + '% this month. Keep it up! 🎉'
+    : 'Great start! Add your expenses to see personalised insights 💡';
+}
+buildSidebar('home');
+buildRings('rings', d.budgets, 'reports.html');
+buildTxList('recent-txs', d.txs, 6);
+</script>
+</body></html>

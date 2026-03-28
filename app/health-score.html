@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Health Score — Finance Flow</title><link rel="stylesheet" href="../css/app.css"></head>
+<body>
+<div class="topbar"><a href="../index.html" class="tb-logo"><div class="tb-logo-icon">⚡</div><div class="tb-logo-text">Finance<span>Flow</span></div></a><div class="tb-right"><a href="reports.html" class="tb-back">← Reports</a></div></div>
+<div class="app-layout"><aside class="sidebar" id="sidebar"></aside>
+<main class="main-content page-in">
+  <div class="page-header"><div class="page-title">Finance Health Score 💯</div><div class="page-sub">Your overall financial fitness based on real data</div></div>
+  <div class="grid-2" style="gap:28px;align-items:start;">
+    <div>
+      <div class="card" style="text-align:center;margin-bottom:20px;">
+        <div class="score-inner"><svg width="180" height="180" viewBox="0 0 180 180"><defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#3D7FFF"/></linearGradient></defs><circle cx="90" cy="90" r="70" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="18"/><circle cx="90" cy="90" r="70" id="score-arc" fill="none" stroke="url(#sg)" stroke-width="18" stroke-dasharray="0 440" stroke-linecap="round" transform="rotate(-90 90 90)"/></svg><div class="score-center"><div class="score-num" id="score-num">—</div><div class="score-lbl" id="score-lbl">Calculate</div></div></div>
+        <div style="font-size:14px;color:var(--text-muted);" id="score-msg">Add transactions to get your score</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:var(--fd);font-size:16px;font-weight:800;color:#fff;margin-bottom:16px;">Score Breakdown</div>
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:14px;color:var(--text);">💰 Savings Rate</span><span style="font-size:16px;font-weight:800;color:var(--primary);" id="s1">—</span></div>
+        <div class="pbar"><div class="pfill" id="b1" style="background:var(--primary);width:0%;"></div></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;" id="t1">Based on income vs spending</div>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:14px;color:var(--text);">🎯 Budget Adherence</span><span style="font-size:16px;font-weight:800;color:var(--gold);" id="s2">—</span></div>
+        <div class="pbar"><div class="pfill" id="b2" style="background:var(--gold);width:0%;"></div></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;" id="t2">Budgets staying within limits</div>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:14px;color:var(--text);">🚀 Goal Progress</span><span style="font-size:16px;font-weight:800;color:var(--accent);" id="s3">—</span></div>
+        <div class="pbar"><div class="pfill" id="b3" style="background:var(--accent);width:0%;"></div></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;" id="t3">Based on goals set and progress</div>
+      </div>
+      <div class="card" style="background:var(--accent-dim);border-color:rgba(61,127,255,.2);">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">🤖 FlowAI Tip</div>
+        <div style="font-size:14px;color:var(--text);line-height:1.65;" id="ai-tip">Add income, track expenses, and set goals to see your personalised health score and AI tips.</div>
+      </div>
+    </div>
+  </div>
+</main></div>
+<script src="../js/app.js"></script>
+<script>
+if (!FF.isLoggedIn()) location.href = 'signin.html';
+buildSidebar('reports');
+const d=FF.data, t=FF.getTotals();
+const rate=parseFloat(t.rate);
+const s1=t.income>0?Math.min(10,Math.round(rate/10)):null;
+const overBudgets=d.budgets.filter(b=>b.spent>b.lim).length;
+const s2=Math.max(0,10-overBudgets*2);
+const s3=d.goals.length>0?Math.round(d.goals.reduce((a,g)=>a+Math.min(g.saved/g.target,1),0)/d.goals.length*10):null;
+const score=s1!==null?Math.round((s1+s2+(s3||5))/3*10):null;
+if(score!==null){
+  document.getElementById('score-num').textContent=score;
+  document.getElementById('score-lbl').textContent=score>=80?'Excellent':score>=60?'Good':score>=40?'Fair':'Needs Work';
+  document.getElementById('score-arc').setAttribute('stroke-dasharray',`${440*score/100} 440`);
+  document.getElementById('score-msg').textContent=score>=80?'🏆 You\'re in the top tier of financial health!':'💡 Keep building good habits to improve your score.';
+  document.getElementById('s1').textContent=s1+'/10'; document.getElementById('b1').style.width=s1*10+'%';
+  document.getElementById('t1').textContent=`Savings rate: ${rate}%`;
+  document.getElementById('s2').textContent=s2+'/10'; document.getElementById('b2').style.width=s2*10+'%';
+  document.getElementById('t2').textContent=overBudgets>0?`${overBudgets} budget(s) exceeded`:'All budgets on track ✓';
+  if(s3!==null){document.getElementById('s3').textContent=s3+'/10'; document.getElementById('b3').style.width=s3*10+'%'; document.getElementById('t3').textContent=`${d.goals.length} goal(s) — average ${Math.round(d.goals.reduce((a,g)=>a+g.saved/g.target*100,0)/d.goals.length)}% complete`;}
+  document.getElementById('ai-tip').textContent=rate<20?'Aim to save 20%+ of your income each month. Start by reducing your largest expense category.':overBudgets>0?`You exceeded ${overBudgets} budget(s). Review your spending in those categories.`:'Great job! Keep contributing to your goals monthly to accelerate your score.';
+}
+</script></body></html>
