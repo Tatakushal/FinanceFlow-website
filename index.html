@@ -33,11 +33,9 @@
     if (!email.includes('@')) { alert('Please enter a valid email'); return; }
 
     const exists = !!localStorage.getItem(`ff_data_${email.toLowerCase()}`);
-    if (exists) {
-      window.location.href = 'app/signin.html?email=' + encodeURIComponent(email);
-    } else {
-      window.location.href = 'app/signup.html?email=' + encodeURIComponent(email);
-    }
+    // Redirect with email param to either signin or signup
+    const dest = exists ? 'app/signin.html' : 'app/signup.html';
+    window.location.href = dest + '?email=' + encodeURIComponent(email);
   }
 </script>
 <style>
