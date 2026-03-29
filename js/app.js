@@ -114,7 +114,12 @@ const FF = {
 
   logout() {
     localStorage.removeItem('ff_user');
-    // Keep data so they can sign back in
+  },
+
+  checkAccount(email) {
+    if (!email) return false;
+    const lowerEmail = email.toLowerCase();
+    return !!localStorage.getItem(`ff_data_${lowerEmail}`);
   },
 
   getUser() {

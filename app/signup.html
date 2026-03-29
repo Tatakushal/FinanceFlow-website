@@ -62,6 +62,9 @@
 <script src="../js/app.js"></script>
 <script>
 if (FF.isLoggedIn()) location.href = 'dashboard.html';
+const urlParams = new URLSearchParams(window.location.search);
+const emailParam = urlParams.get('email');
+if (emailParam) document.getElementById('semail').value = decodeURIComponent(emailParam);
 
 function showStep(step) {
   document.getElementById('s1').style.display = step === 1 ? 'block' : 'none';
