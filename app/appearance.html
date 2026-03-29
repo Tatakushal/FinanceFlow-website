@@ -57,12 +57,12 @@
       <div class="card">
         <div style="font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">Language</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;" id="language-group">
-          <div class="chip on" onclick="selChip(this,'lang')">English</div>
-          <div class="chip" onclick="selChip(this,'lang')">हिन्दी</div>
-          <div class="chip" onclick="selChip(this,'lang')">தமிழ்</div>
-          <div class="chip" onclick="selChip(this,'lang')">বাংলা</div>
-          <div class="chip" onclick="selChip(this,'lang')">తెలుగు</div>
-          <div class="chip" onclick="selChip(this,'lang')">मराठी</div>
+          <div class="chip on" data-lang="English" onclick="selChip(this,'lang')">English</div>
+          <div class="chip" data-lang="Hindi" onclick="selChip(this,'lang')">&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</div>
+          <div class="chip" data-lang="Tamil" onclick="selChip(this,'lang')">&#2980;&#2990;&#3007;&#2996;&#3021;</div>
+          <div class="chip" data-lang="Bengali" onclick="selChip(this,'lang')">&#2476;&#2494;&#2434;&#2482;&#2494;</div>
+          <div class="chip" data-lang="Telugu" onclick="selChip(this,'lang')">&#3108;&#3142;&#3122;&#3137;&#3095;&#3137;</div>
+          <div class="chip" data-lang="Marathi" onclick="selChip(this,'lang')">&#2350;&#2352;&#2366;&#2336;&#2368;</div>
         </div>
       </div>
     </div>
@@ -123,7 +123,7 @@ function initializeSettings() {
   // Set active language
   document.querySelectorAll('#language-group .chip').forEach(chip => {
     chip.classList.remove('on');
-    if (chip.textContent.trim() === d.appearance.language) {
+    if ((chip.dataset.lang || chip.textContent.trim()) === d.appearance.language) {
       chip.classList.add('on');
     }
   });
@@ -182,16 +182,17 @@ function selChip(el, group) {
     FF.save(d);
     toast('Currency: ' + currency);
   } else if (group === 'lang') {
-    const lang = el.textContent.trim();
+    // Use data-lang ASCII key so localStorage always stores a reliable ASCII value
+    const lang = el.dataset.lang || el.textContent.trim();
     d.appearance.language = lang;
     FF.save(d);
     
-    // Apply language immediately
+    // Apply language immediately to all data-translate elements
     FF.applyLanguage(lang);
     
     toast('Language: ' + lang);
     
-    // Reload page after a short delay to apply translations everywhere
+    // Reload page after short delay so sidebar rebuilds with new language
     setTimeout(() => location.reload(), 500);
   }
 }

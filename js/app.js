@@ -1,7 +1,7 @@
-﻿// â”€â”€â”€ FINANCE FLOW â€” STATE & UTILITIES â”€â”€â”€
+// ─── FINANCE FLOW – STATE & UTILITIES ───
 
 const FF = {
-  // Fresh blank data for a new user â€” NO sample transactions
+  // Fresh blank data for a new user – NO sample transactions
   freshData(name, email, income) {
     return {
       name: name || '',
@@ -42,14 +42,31 @@ const FF = {
       d.appearance.currency = '\u20B9 INR';
     }
     // Auto-repair older mojibake currency text saved in localStorage.
-    if (d.appearance.currency.includes('â‚¹')) {
+    if (d.appearance.currency.includes('\u00e2\u0082\u00b9')) {
       d.appearance.currency = '\u20B9 INR';
+    }
+    // Migrate old native-script language names to ASCII keys
+    const _lm = {
+      '\u0939\u093F\u0928\u094D\u0926\u0940': 'Hindi',
+      '\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD': 'Tamil',
+      '\u09AC\u09BE\u0982\u09B2\u09BE': 'Bengali',
+      '\u0C24\u0C46\u0C32\u0C41\u0C17\u0C41': 'Telugu',
+      '\u092E\u0930\u093E\u0920\u0940': 'Marathi'
+    };
+    if (d.appearance.language && _lm[d.appearance.language]) {
+      d.appearance.language = _lm[d.appearance.language];
     }
     return d;
   },
 
+  getDataKey() {
+    const u = this.getUser();
+    return u?.email ? `ff_data_${u.email.toLowerCase()}` : 'ff_data';
+  },
+
   get data() {
-    const s = localStorage.getItem('ff_data');
+    const key = this.getDataKey();
+    const s = localStorage.getItem(key);
     if (!s) return null;
     try {
       return this.ensureDataShape(JSON.parse(s));
@@ -61,22 +78,34 @@ const FF = {
   save(d) {
     const safe = this.ensureDataShape(d);
     if (!safe) return;
-    localStorage.setItem('ff_data', JSON.stringify(safe));
+    const key = this.getDataKey();
+    localStorage.setItem(key, JSON.stringify(safe));
   },
 
   isLoggedIn() { return !!localStorage.getItem('ff_user'); },
 
-  // Called on signup â€” wipes everything and starts fresh
+  // Called on signup – wipes everything and starts fresh for this user
   signup(name, email, income) {
-    localStorage.removeItem('ff_user');
-    localStorage.removeItem('ff_data');
+    const key = `ff_data_${email.toLowerCase()}`;
+    localStorage.removeItem(key);
+    localStorage.setItem('ff_user', JSON.stringify({name, email}));
     const d = this.freshData(name, email, income);
     this.save(d);
-    localStorage.setItem('ff_user', JSON.stringify({name, email}));
   },
 
-  // Called on sign in â€” uses existing data or creates fresh
+  // Called on sign in – uses existing data or creates fresh
   login(name, email) {
+    const lowerEmail = email.toLowerCase();
+    const newKey = `ff_data_${lowerEmail}`;
+    
+    // Migration: If legacy 'ff_data' exists but user-specific doesn't, migrate it.
+    const legacy = localStorage.getItem('ff_data');
+    if (legacy && !localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, legacy);
+        // Clear legacy once migrated to avoid confusion
+        localStorage.removeItem('ff_data');
+    }
+    
     localStorage.setItem('ff_user', JSON.stringify({name, email}));
     if (!this.data) {
       this.save(this.freshData(name, email, 0));
@@ -131,10 +160,24 @@ const FF = {
       return sum + outstanding;
     }, 0);
     return { assets, liabilities, net: assets - liabilities };
+  },
+
+  toggleSidebar(open) {
+    const b = document.body;
+    const overlay = document.getElementById('sidebar-overlay');
+    if (open === undefined) open = !b.classList.contains('sidebar-open');
+    
+    if (open) {
+      b.classList.add('sidebar-open');
+      if (overlay) overlay.classList.add('on');
+    } else {
+      b.classList.remove('sidebar-open');
+      if (overlay) overlay.classList.remove('on');
+    }
   }
 };
 
-// â”€â”€â”€ TOAST â”€â”€â”€
+// ─── TOAST ───
 function toast(msg) {
   let t = document.getElementById('ff-toast');
   if (!t) { t = document.createElement('div'); t.id='ff-toast'; t.className='toast'; document.body.appendChild(t); }
@@ -144,10 +187,33 @@ function toast(msg) {
   t._t = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// â”€â”€â”€ BUILD SIDEBAR â”€â”€â”€
+// ─── BUILD SIDEBAR ───
 function buildSidebar(active) {
   const el = document.getElementById('sidebar');
   if (!el) return;
+
+  // Setup Mobile Menu Button if not exists
+  const topbar = document.querySelector('.topbar');
+  if (topbar && !document.querySelector('.tb-menu')) {
+    const menuBtn = document.createElement('div');
+    menuBtn.className = 'tb-menu';
+    menuBtn.innerHTML = '&#x2630;'; // Hamburger icon
+    menuBtn.onclick = (e) => {
+      e.stopPropagation();
+      FF.toggleSidebar();
+    };
+    topbar.prepend(menuBtn);
+    
+    // Setup Backdrop Overlay
+    if (!document.getElementById('sidebar-overlay')) {
+      const overlay = document.createElement('div');
+      overlay.id = 'sidebar-overlay';
+      overlay.className = 'sidebar-overlay';
+      overlay.onclick = () => FF.toggleSidebar(false);
+      document.body.appendChild(overlay);
+    }
+  }
+
   const d = FF.data;
   const u = FF.getUser();
   const links = [
@@ -156,27 +222,31 @@ function buildSidebar(active) {
     {id:'reports', icon:'&#x1F4CA;', lbl:'Reports',       href:'reports.html'},
     {id:'goals',   icon:'&#x1F3AF;', lbl:'Goals',         href:'goals.html'},
     {id:'subs',    icon:'&#x1F4F1;', lbl:'Subscriptions', href:'subscriptions.html'},
-    {id:'wealth',  icon:'$',  lbl:'Wealth',         href:'wealth.html'},
+    {id:'wealth',  icon:'$',         lbl:'Wealth',         href:'wealth.html'},
     {id:'ai',      icon:'&#x1F916;', lbl:'FlowAI',        href:'ai-chat.html'},
   ];
   const settings = [
-    {id:'profile',      icon:'&#x1F464;', lbl:'Profile',        href:'profile.html'},
-    {id:'notifications',icon:'&#x1F514;', lbl:'Notifications',   href:'notifications.html'},
-    {id:'security',     icon:'&#x1F512;', lbl:'Security',       href:'security.html'},
-    {id:'appearance',   icon:'&#x1F3A8;', lbl:'Appearance',      href:'appearance.html'},
+    {id:'profile', icon:'&#x2699;&#xFE0F;', lbl:'Settings', href:'settings.html'},
   ];
   el.innerHTML = `
     <div class="sidebar-section">Menu</div>
-    ${links.map(l=>`<a href="${l.href}" class="s-link ${l.id===active?'active':''}"><span class="s-link-icon">${l.icon}</span>${FF.getTranslation(l.lbl)}</a>`).join('')}
+    ${links.map(l=>`<a href="${l.href}" class="s-link ${l.id===active?'active':''}"><span class="s-link-icon">${l.icon}</span><span data-translate="${l.lbl}">${FF.getTranslation(l.lbl)}</span></a>`).join('')}
     <div class="sidebar-section">Settings</div>
-    ${settings.map(l=>`<a href="${l.href}" class="s-link ${l.id===active?'active':''}"><span class="s-link-icon">${l.icon}</span>${FF.getTranslation(l.lbl)}</a>`).join('')}
+    ${settings.map(l=>`<a href="${l.href}" class="s-link ${l.id===active?'active':''}"><span class="s-link-icon">${l.icon}</span><span data-translate="${l.lbl}">${FF.getTranslation(l.lbl)}</span></a>`).join('')}
     <div class="sidebar-footer">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Signed in as<br><strong style="color:#fff;">${u?.name||''}</strong></div>
       <button onclick="FF.logout();location.href='../index.html';" style="width:100%;background:var(--warn-dim);border:1px solid rgba(255,107,53,.2);color:var(--warn);padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--fb);">&#x1F6AA; Log Out</button>
     </div>`;
+
+  // Close sidebar on link click (for mobile)
+  el.querySelectorAll('.s-link').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 760) FF.toggleSidebar(false);
+    });
+  });
 }
 
-// â”€â”€â”€ BUILD RINGS â”€â”€â”€
+// ─── BUILD RINGS ───
 function buildRings(id, budgets, href) {
   const el = document.getElementById(id); if (!el) return;
   el.innerHTML = budgets.map(b => {
@@ -196,12 +266,12 @@ function buildRings(id, budgets, href) {
   }).join('');
 }
 
-// â”€â”€â”€ BUILD TX LIST â”€â”€â”€
+// ─── BUILD TX LIST ───
 function buildTxList(id, txs, limit) {
   const el = document.getElementById(id); if (!el) return;
   const list = limit ? txs.slice(0, limit) : txs;
   if (!list.length) {
-    el.innerHTML = '<div style="text-align:center;padding:48px 20px;color:var(--text-muted);font-size:14px;">No transactions yet â€” add your first one!</div>';
+    el.innerHTML = '<div style="text-align:center;padding:48px 20px;color:var(--text-muted);font-size:15px;">No transactions yet \u2014 add your first one!</div>';
     return;
   }
   el.innerHTML = list.map(t => `
@@ -214,7 +284,8 @@ function buildTxList(id, txs, limit) {
       <div class="tx-amt ${t.type==='income'?'tx-pos':'tx-neg'}">${t.type==='income'?'+':'-'}${FF.fmt(t.amt)}</div>
     </div>`).join('');
 }
-// â”€â”€â”€ THEME & APPEARANCE MANAGEMENT â”€â”€â”€
+
+// ─── THEME & APPEARANCE MANAGEMENT ───
 FF.applyTheme = function(theme) {
   document.documentElement.setAttribute('data-theme', theme === 'dark' ? '' : theme);
   document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
@@ -222,64 +293,72 @@ FF.applyTheme = function(theme) {
 
 FF.translations = {
   'English': {
-    'Dashboard': 'Dashboard', 'Transactions': 'Transactions', 'Reports': 'Reports', 'Goals': 'Goals', 'Subscriptions': 'Subscriptions', 'Wealth': 'Wealth', 'FlowAI': 'FlowAI',
-    'Profile': 'Profile', 'Notifications': 'Notifications', 'Security': 'Security', 'Appearance': 'Appearance', 'Data & Privacy': 'Data & Privacy',
-    'Add Expense': 'Add Expense', 'Add Income': 'Add Income', 'Export': 'Export', 'View details': 'View details'
+    'Dashboard':'Dashboard','Transactions':'Transactions','Reports':'Reports','Goals':'Goals',
+    'Subscriptions':'Subscriptions','Wealth':'Wealth','FlowAI':'FlowAI',
+    'Profile':'Profile','Notifications':'Notifications','Security':'Security',
+    'Appearance':'Appearance','Data & Privacy':'Data & Privacy',
+    'Add Expense':'Add Expense','Add Income':'Add Income','Export':'Export','View details':'View details'
   },
-  'à¤¹à¤¿à¤¨à¥à¤¦à¥€': {
-    'Dashboard': 'à¤¡à¥ˆà¤¶à¤¬à¥‹à¤°à¥à¤¡', 'Transactions': 'à¤²à¥‡à¤¨à¤¦à¥‡à¤¨', 'Reports': 'à¤°à¤¿à¤ªà¥‹à¤°à¥à¤Ÿ', 'Goals': 'à¤²à¤•à¥à¤·à¥à¤¯', 'FlowAI': 'FlowAI',
-    'Profile': 'à¤ªà¥à¤°à¥‹à¤«à¤¾à¤‡à¤²', 'Notifications': 'à¤¸à¥‚à¤šà¤¨à¤¾à¤à¤‚', 'Security': 'à¤¸à¥à¤°à¤•à¥à¤·à¤¾', 'Appearance': 'à¤¦à¤¿à¤–à¤¾à¤µà¤Ÿ', 'Data & Privacy': 'à¤¡à¥‡à¤Ÿà¤¾ à¤”à¤° à¤—à¥‹à¤ªà¤¨à¥€à¤¯à¤¤à¤¾',
-    'Add Expense': 'à¤–à¤°à¥à¤š à¤œà¥‹à¤¡à¤¼à¥‡à¤‚', 'Add Income': 'à¤†à¤¯ à¤œà¥‹à¤¡à¤¼à¥‡à¤‚', 'Export': 'à¤¨à¤¿à¤°à¥à¤¯à¤¾à¤¤ à¤•à¤°à¥‡à¤‚', 'View details': 'à¤µà¤¿à¤µà¤°à¤£ à¤¦à¥‡à¤–à¥‡à¤‚'
+  'Hindi': {
+    'Dashboard':'\u0921\u0948\u0936\u092C\u094B\u0930\u094D\u0921','Transactions':'\u0932\u0947\u0928\u0926\u0947\u0928',
+    'Reports':'\u0930\u093F\u092A\u094B\u0930\u094D\u091F','Goals':'\u0932\u0915\u094D\u0937\u094D\u092F',
+    'Subscriptions':'\u0938\u0926\u0938\u094D\u092F\u0924\u093E','Wealth':'\u0938\u0902\u092A\u0926\u093E','FlowAI':'FlowAI',
+    'Profile':'\u092A\u094D\u0930\u094B\u092B\u093E\u0907\u0932','Notifications':'\u0938\u0942\u091A\u0928\u093E\u090F\u0902',
+    'Security':'\u0938\u0941\u0930\u0915\u094D\u0937\u093E','Appearance':'\u0926\u093F\u0916\u093E\u0935\u091F',
+    'Data & Privacy':'\u0921\u0947\u091F\u093E \u0914\u0930 \u0917\u094B\u092A\u0928\u0940\u092F\u0924\u093E',
+    'Add Expense':'\u0916\u0930\u094D\u091A \u091C\u094B\u0921\u093C\u0947\u0902','Add Income':'\u0906\u092F \u091C\u094B\u0921\u093C\u0947\u0902',
+    'Export':'\u0928\u093F\u0930\u094D\u092F\u093E\u0924 \u0915\u0930\u0947\u0902','View details':'\u0935\u093F\u0935\u0930\u0923 \u0926\u0947\u0916\u0947\u0902'
   },
-  'à®¤à®®à®¿à®´à¯': {
-    'Dashboard': 'à®Ÿà®¾à®·à¯à®ªà¯‹à®°à¯à®Ÿà¯', 'Transactions': 'à®ªà®°à®¿à®µà®°à¯à®¤à¯à®¤à®©à¯ˆà®•à®³à¯', 'Reports': 'à®…à®±à®¿à®•à¯à®•à¯ˆà®•à®³à¯', 'Goals': 'à®‡à®²à®•à¯à®•à¯à®•à®³à¯', 'FlowAI': 'FlowAI',
-    'Profile': 'à®šà¯à®¯à®µà®¿à®µà®°à®®à¯', 'Notifications': 'à®…à®±à®¿à®µà®¿à®ªà¯à®ªà¯à®•à®³à¯', 'Security': 'à®ªà®¾à®¤à¯à®•à®¾à®ªà¯à®ªà¯', 'Appearance': 'à®¤à¯‹à®±à¯à®±à®®à¯', 'Data & Privacy': 'à®¤à®°à®µà¯ à®®à®±à¯à®±à¯à®®à¯ à®¤à®©à®¿à®¯à¯à®°à®¿à®®à¯ˆ',
-    'Add Expense': 'à®šà¯†à®²à®µà¯ˆà®šà¯ à®šà¯‡à®°à¯à®•à¯à®•à®µà¯à®®à¯', 'Add Income': 'à®µà®°à¯à®®à®¾à®©à®¤à¯à®¤à¯ˆà®šà¯ à®šà¯‡à®°à¯à®•à¯à®•à®µà¯à®®à¯', 'Export': 'à®à®±à¯à®±à¯à®®à®¤à®¿', 'View details': 'à®µà®¿à®µà®°à®™à¯à®•à®³à¯ˆà®•à¯ à®•à®¾à®£à¯à®•'
+  'Tamil': {
+    'Dashboard':'\u0B9F\u0BBE\u0BB7\u0BCD\u0BAA\u0BCB\u0BB0\u0BCD\u0B9F\u0BC1','Transactions':'\u0BAA\u0BB0\u0BBF\u0BB5\u0BB0\u0BCD\u0BA4\u0BCD\u0BA4\u0BA9\u0BC8\u0B95\u0BB3\u0BCD',
+    'Reports':'\u0A85\u0BB1\u0BBF\u0B95\u0BCD\u0B95\u0BC8\u0B95\u0BB3\u0BCD','Goals':'\u0C07\u0BB2\u0B95\u0BCD\u0B95\u0BC1\u0B95\u0BB3\u0BCD',
+    'Subscriptions':'\u0B9A\u0BA8\u0BA4\u0BBE','Wealth':'\u0B9A\u0BC6\u0BB2\u0BCD\u0BB5\u0BAE\u0BCD','FlowAI':'FlowAI',
+    'Profile':'\u0B9A\u0BC1\u0BAF\u0BB5\u0BBF\u0BB5\u0BB0\u0BAE\u0BCD','Notifications':'\u0A85\u0BB1\u0BBF\u0BB5\u0BBF\u0BAA\u0BCD\u0BAA\u0BC1\u0B95\u0BB3\u0BCD',
+    'Security':'\u0BAA\u0BBE\u0BA4\u0BC1\u0B95\u0BBE\u0BAA\u0BCD\u0BAA\u0BC1','Appearance':'\u0BA4\u0BCB\u0BB1\u0BCD\u0BB1\u0BAE\u0BCD',
+    'Data & Privacy':'\u0BA4\u0BB0\u0BB5\u0BC1 \u0BAE\u0BB1\u0BCD\u0BB1\u0BC1\u0BAE\u0BCD \u0BA4\u0BA9\u0BBF\u0BAF\u0BC1\u0BB0\u0BBF\u0BAE\u0BC8',
+    'Add Expense':'\u0B9A\u0BC6\u0BB2\u0BB5\u0BC8\u0B9A\u0BCD \u0B9A\u0BC7\u0BB0\u0BCD\u0B95\u0BCD\u0B95\u0BB5\u0BC1\u0BAE\u0BCD','Add Income':'\u0BB5\u0BB0\u0BC1\u0BAE\u0BBE\u0BA9\u0BA4\u0BCD\u0BA4\u0BC8\u0B9A\u0BCD \u0B9A\u0BC7\u0BB0\u0BCD\u0B95\u0BCD\u0B95\u0BB5\u0BC1\u0BAE\u0BCD',
+    'Export':'\u0B8F\u0BB1\u0BCD\u0BB1\u0BC1\u0BAE\u0BA4\u0BBF','View details':'\u0BB5\u0BBF\u0BB5\u0BB0\u0B99\u0BCD\u0B95\u0BB3\u0BC8\u0B95\u0BCD \u0B95\u0BBE\u0BA3\u0BCD\u0B95'
   },
-  'à¦¬à¦¾à¦‚à¦²à¦¾': {
-    'Dashboard': 'à¦¡à§à¦¯à¦¾à¦¶à¦¬à§‹à¦°à§à¦¡', 'Transactions': 'à¦²à§‡à¦¨à¦¦à§‡à¦¨', 'Reports': 'à¦°à¦¿à¦ªà§‹à¦°à§à¦Ÿ', 'Goals': 'à¦²à¦•à§à¦·à§à¦¯', 'FlowAI': 'FlowAI',
-    'Profile': 'à¦ªà§à¦°à§‹à¦«à¦¾à¦‡à¦²', 'Notifications': 'à¦¬à¦¿à¦œà§à¦žà¦ªà§à¦¤à¦¿', 'Security': 'à¦¨à¦¿à¦°à¦¾à¦ªà¦¤à§à¦¤à¦¾', 'Appearance': 'à¦šà§‡à¦¹à¦¾à¦°à¦¾', 'Data & Privacy': 'à¦¡à§‡à¦Ÿà¦¾ à¦à¦¬à¦‚ à¦—à§‹à¦ªà¦¨à§€à¦¯à¦¼à¦¤à¦¾',
-    'Add Expense': 'à¦–à¦°à¦š à¦¯à§‹à¦— à¦•à¦°à§à¦¨', 'Add Income': 'à¦†à¦¯à¦¼ à¦¯à§‹à¦— à¦•à¦°à§à¦¨', 'Export': 'à¦°à¦ªà§à¦¤à¦¾à¦¨à¦¿', 'View details': 'à¦¬à¦¿à¦¸à§à¦¤à¦¾à¦°à¦¿à¦¤ à¦¦à§‡à¦–à§à¦¨'
+  'Bengali': {
+    'Dashboard':'\u09A1\u09CD\u09AF\u09BE\u09B6\u09AC\u09CB\u09B0\u09CD\u09A1','Transactions':'\u09B2\u09C7\u09A8\u09A6\u09C7\u09A8',
+    'Reports':'\u09B0\u09BF\u09AA\u09CB\u09B0\u09CD\u099F','Goals':'\u09B2\u0995\u09CD\u09B7\u09CD\u09AF',
+    'Subscriptions':'\u09B8\u09A6\u09B8\u09CD\u09AF\u09AA\u09A6','Wealth':'\u09B8\u09AE\u09CD\u09AA\u09A6','FlowAI':'FlowAI',
+    'Profile':'\u09AA\u09CD\u09B0\u09CB\u09AB\u09BE\u0987\u09B2','Notifications':'\u09AC\u09BF\u099C\u09CD\u099E\u09AA\u09CD\u09A4\u09BF',
+    'Security':'\u09A8\u09BF\u09B0\u09BE\u09AA\u09A4\u09CD\u09A4\u09BE','Appearance':'\u099A\u09C7\u09B9\u09BE\u09B0\u09BE',
+    'Data & Privacy':'\u09A1\u09C7\u099F\u09BE \u098F\u09AC\u0982 \u0997\u09CB\u09AA\u09A8\u09C0\u09AF\u09BC\u09A4\u09BE',
+    'Add Expense':'\u09AC\u09CD\u09AF\u09AF\u09BC \u09AF\u09CB\u0997 \u0995\u09B0\u09C1\u09A8','Add Income':'\u0986\u09AF\u09BC \u09AF\u09CB\u0997 \u0995\u09B0\u09C1\u09A8',
+    'Export':'\u09B0\u09AA\u09CD\u09A4\u09BE\u09A8\u09BF','View details':'\u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09A6\u09C7\u0996\u09C1\u09A8'
   },
-  'à°¤à±†à°²à±à°—à±': {
-    'Dashboard': 'à°¡à±à°¯à°¾à°·à±â€Œà°¬à±‹à°°à±à°¡à±', 'Transactions': 'à°²à°¾à°µà°¾à°¦à±‡à°µà±€à°²à±', 'Reports': 'à°¨à°¿à°µà±‡à°¦à°¿à°•à°²à±', 'Goals': 'à°²à°•à±à°·à±à°¯à°¾à°²à±', 'FlowAI': 'FlowAI',
-    'Profile': 'à°ªà±à°°à±Šà°«à±ˆà°²à±', 'Notifications': 'à°¨à±‹à°Ÿà°¿à°«à°¿à°•à±‡à°·à°¨à±â€Œà°²à±', 'Security': 'à°¸ecurity', 'Appearance': 'à°°à±‚à°ªà°¾à°¨à±à°¨à°¿', 'Data & Privacy': 'à°¡à±‡à°Ÿà°¾ à°®à°°à°¿à°¯à± à°—à±‹à°ªà±à°¯à°¤',
-    'Add Expense': 'à°–à°°à±à°šà± à°œà±‹à°¡à°¿à°‚à°šà°‚à°¡à°¿', 'Add Income': 'à°†à°¦à°¾à°¯à°‚ à°œà±‹à°¡à°¿à°‚à°šà°‚à°¡à°¿', 'Export': 'à°Žà°—à±à°®à°¤à°¿', 'View details': 'à°µà°¿à°µà°°à°¾à°²à± à°šà±‚à°¡à°‚à°¡à°¿'
+  'Telugu': {
+    'Dashboard':'\u0C21\u0C4D\u0C2F\u0C3E\u0C37\u0C4D\u200C\u0C2C\u0C4B\u0C30\u0C4D\u0C21\u0C41','Transactions':'\u0C32\u0C3E\u0C35\u0C3E\u0C26\u0C47\u0C35\u0C40\u0C32\u0C41',
+    'Reports':'\u0C28\u0C3F\u0C35\u0C47\u0C26\u0C3F\u0C15\u0C32\u0C41','Goals':'\u0C32\u0C15\u0C4D\u0C37\u0C4D\u0C2F\u0C3E\u0C32\u0C41',
+    'Subscriptions':'\u0C1A\u0C02\u0C26\u0C3E\u0C32\u0C41','Wealth':'\u0C38\u0C02\u0C2A\u0C26','FlowAI':'FlowAI',
+    'Profile':'\u0C2A\u0C4D\u0C30\u0C4A\u0C2B\u0C48\u0C32\u0C4D','Notifications':'\u0C28\u0C4B\u0C1F\u0C3F\u0C2B\u0C3F\u0C15\u0C47\u0C37\u0C28\u0C4D\u200C\u0C32\u0C41',
+    'Security':'\u0C38\u0C41\u0C30\u0C15\u0C4D\u0C37','Appearance':'\u0C30\u0C42\u0C2A\u0C3E\u0C28\u0C4D\u0C28\u0C3F',
+    'Data & Privacy':'\u0C21\u0C47\u0C1F\u0C3E \u0C2E\u0C30\u0C3F\u0C2F\u0C41 \u0C17\u0C4B\u0C2A\u0C4D\u0C2F\u0C24',
+    'Add Expense':'\u0C16\u0C30\u0C4D\u0C1A\u0C41 \u0C1C\u0C4B\u0C21\u0C3F\u0C02\u0C1A\u0C02\u0C21\u0C3F','Add Income':'\u0C06\u0C26\u0C3E\u0C2F\u0C02 \u0C1C\u0C4B\u0C21\u0C3F\u0C02\u0C1A\u0C02\u0C21\u0C3F',
+    'Export':'\u0C0E\u0C17\u0C41\u0C2E\u0C24\u0C3F','View details':'\u0C35\u0C3F\u0C35\u0C30\u0C3E\u0C32\u0C41 \u0C1A\u0C42\u0C21\u0C02\u0C21\u0C3F'
   },
-  'à¤®à¤°à¤¾à¤ à¥€': {
-    'Dashboard': 'à¤¡à¥…à¤¶à¥à¤¬à¥‹à¤°à¥à¤¡', 'Transactions': 'à¤µà¥à¤¯à¤µà¤¹à¤¾à¤°', 'Reports': 'à¤…à¤¹à¤µà¤¾à¤²', 'Goals': 'à¤²à¤•à¥à¤·à¥à¤¯', 'FlowAI': 'FlowAI',
-    'Profile': 'à¤ªà¥à¤°à¥‹à¤«à¤¾à¤ˆà¤²', 'Notifications': 'à¤¸à¥‚à¤šà¤¨à¤¾', 'Security': 'à¤¸à¥à¤°à¤•à¥à¤·à¤¾', 'Appearance': 'à¤¦à¤¿à¤¸à¤¾à¤µà¤Ÿ', 'Data & Privacy': 'à¤¡à¥‡à¤Ÿà¤¾ à¤†à¤£à¤¿ à¤—à¥‹à¤ªà¤¨à¥€à¤¯à¤¤à¤¾',
-    'Add Expense': 'à¤–à¤°à¥à¤š à¤œà¥‹à¤¡à¤¾', 'Add Income': 'à¤‰à¤¤à¥à¤ªà¤¨à¥à¤¨ à¤œà¥‹à¤¡à¤¾', 'Export': 'à¤¨à¤¿à¤°à¥à¤¯à¤¾à¤¤ à¤•à¤°à¤¾', 'View details': 'à¤¤à¤ªà¤¶à¥€à¤² à¤ªà¤¹à¤¾'
+  'Marathi': {
+    'Dashboard':'\u0921\u0945\u0936\u092C\u094B\u0930\u094D\u0921','Transactions':'\u0935\u094D\u092F\u0935\u0939\u093E\u0930',
+    'Reports':'\u0905\u0939\u0935\u093E\u0932','Goals':'\u0932\u0915\u094D\u0937\u094D\u092F',
+    'Subscriptions':'\u0938\u0926\u0938\u094D\u092F\u0924\u093E','Wealth':'\u0938\u0902\u092A\u0924\u094D\u0924\u0940','FlowAI':'FlowAI',
+    'Profile':'\u092A\u094D\u0930\u094B\u092B\u093E\u0908\u0932','Notifications':'\u0938\u0942\u091A\u0928\u093E',
+    'Security':'\u0938\u0941\u0930\u0915\u094D\u0937\u093E','Appearance':'\u0926\u093F\u0938\u093E\u0935\u091F',
+    'Data & Privacy':'\u0921\u0947\u091F\u093E \u0906\u0923\u093F \u0917\u094B\u092A\u0928\u0940\u092F\u0924\u093E',
+    'Add Expense':'\u0916\u0930\u094D\u091A \u091C\u094B\u0921\u093E','Add Income':'\u0909\u0924\u094D\u092A\u0928\u094D\u0928 \u091C\u094B\u0921\u093E',
+    'Export':'\u0928\u093F\u0930\u094D\u092F\u093E\u0924 \u0915\u0930\u093E','View details':'\u0924\u092A\u0936\u0940\u0932 \u092A\u0939\u093E'
   }
 };
 
 FF.applyLanguage = function(lang) {
   FF.currentLanguage = lang;
   localStorage.setItem('ff_language', lang);
-  
-  // Update sidebar text immediately
-  const links = document.querySelectorAll('.s-link');
   const translations = FF.translations[lang] || FF.translations['English'];
-  
-  links.forEach(link => {
-    let text = link.textContent.trim();
-    if (translations[text]) {
-      // Keep the icon and update only the text
-      const icon = link.querySelector('.s-link-icon');
-      if (icon) {
-        link.textContent = '';
-        link.appendChild(icon);
-        link.appendChild(document.createTextNode(translations[text]));
-      }
-    }
-  });
-  
-  // Update any other UI text that might be visible
+  // Update all elements tagged with data-translate
   document.querySelectorAll('[data-translate]').forEach(el => {
     const key = el.getAttribute('data-translate');
-    if (translations[key]) {
-      el.textContent = translations[key];
-    }
+    el.textContent = translations[key] || key;
   });
 };
 
@@ -292,11 +371,8 @@ FF.getTranslation = function(key) {
 FF.initializeAppearance = function() {
   const d = FF.data;
   if (d && d.appearance) {
-    // Apply theme
     FF.applyTheme(d.appearance.theme);
-    // Apply accent color
     document.documentElement.style.setProperty('--primary', d.appearance.accent);
-    // Apply language
     if (d.appearance.language) {
       FF.applyLanguage(d.appearance.language);
     }

@@ -14,10 +14,25 @@ for (const envPath of candidateEnvFiles) {
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const RUNTIME_VERSION = "flowai-runtime-v3";
+const HTTP_TIMEOUT_MS = Math.max(3_000, Number(process.env.FLOWAI_HTTP_TIMEOUT_MS || 12_000) || 12_000);
+const MAX_MESSAGE_LEN = 1_200;
+
+function cleanText(value, maxLen = 300) {
+  const base = String(value == null ? "" : value);
+  const noCtrl = base.replace(/[\u0000-\u001F\u007F]/g, " ");
+  return noCtrl.trim().slice(0, maxLen);
+}
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function clampMoney(value) {
+  const n = toNumber(value, 0);
+  if (!Number.isFinite(n)) return 0;
+  const capped = Math.max(-1_000_000_000_000, Math.min(n, 1_000_000_000_000));
+  return capped;
 }
 
 function round(value, digits = 2) {
@@ -25,32 +40,65 @@ function round(value, digits = 2) {
   return Math.round(value * factor) / factor;
 }
 
+function totalFromTxs(txs) {
+  if (!Array.isArray(txs) || !txs.length) {
+    return { income: 0, spent: 0, saved: 0, rate: 0 };
+  }
+
+  let income = 0;
+  let spent = 0;
+  for (const tx of txs) {
+    const amt = Math.max(0, clampMoney(tx?.amt));
+    const type = String(tx?.type || "").toLowerCase();
+    if (type === "income") income += amt;
+    else spent += amt;
+  }
+  const saved = income - spent;
+  const rate = income > 0 ? round((saved / income) * 100, 1) : 0;
+  return {
+    income: round(income, 2),
+    spent: round(spent, 2),
+    saved: round(saved, 2),
+    rate
+  };
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = HTTP_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function normalizeTransactions(txs) {
   if (!Array.isArray(txs)) return [];
   return txs.slice(0, 80).map((tx) => ({
-    name: String(tx?.name || "Unknown"),
-    type: String(tx?.type || "expense"),
-    cat: String(tx?.cat || "Other"),
-    amt: toNumber(tx?.amt, 0),
-    date: String(tx?.date || "Unknown")
+    name: cleanText(tx?.name || "Unknown", 80),
+    type: cleanText(tx?.type || "expense", 20).toLowerCase(),
+    cat: cleanText(tx?.cat || "Other", 50),
+    amt: round(clampMoney(tx?.amt), 2),
+    date: cleanText(tx?.date || "Unknown", 40)
   }));
 }
 
 function normalizeBudgets(budgets) {
   if (!Array.isArray(budgets)) return [];
   return budgets.slice(0, 20).map((b) => ({
-    cat: String(b?.cat || "Other"),
-    spent: toNumber(b?.spent, 0),
-    lim: toNumber(b?.lim, 0)
+    cat: cleanText(b?.cat || "Other", 50),
+    spent: round(Math.max(0, clampMoney(b?.spent)), 2),
+    lim: round(Math.max(0, clampMoney(b?.lim)), 2)
   }));
 }
 
 function normalizeGoals(goals) {
   if (!Array.isArray(goals)) return [];
   return goals.slice(0, 20).map((g) => ({
-    name: String(g?.name || "Goal"),
-    target: toNumber(g?.target ?? g?.amt ?? g?.lim, 0),
-    saved: toNumber(g?.saved ?? g?.current ?? 0, 0)
+    name: cleanText(g?.name || "Goal", 80),
+    target: round(Math.max(0, clampMoney(g?.target ?? g?.amt ?? g?.lim)), 2),
+    saved: round(Math.max(0, clampMoney(g?.saved ?? g?.current ?? 0)), 2)
   }));
 }
 
@@ -68,14 +116,14 @@ function normalizeSubscriptions(subscriptions) {
           : amount;
 
     return {
-      name: String(s?.name || "Subscription"),
-      category: String(s?.category || "Other"),
+      name: cleanText(s?.name || "Subscription", 80),
+      category: cleanText(s?.category || "Other", 50),
       amount: round(Math.max(amount, 0), 2),
       cycle,
       monthlyCost: round(Math.max(monthlyCost, 0), 2),
-      nextBillingDate: String(s?.nextBillingDate || ""),
+      nextBillingDate: cleanText(s?.nextBillingDate || "", 40),
       autoRenew: s?.autoRenew !== false,
-      status: String(s?.status || "active")
+      status: cleanText(s?.status || "active", 20).toLowerCase()
     };
   });
 }
@@ -86,7 +134,7 @@ function normalizeHistory(history) {
   const out = [];
   for (const item of history.slice(-10)) {
     const roleRaw = String(item?.role || "").toLowerCase();
-    const content = String(item?.content || "").trim().slice(0, 800);
+    const content = cleanText(item?.content || "", 800);
     if (!content) continue;
     if (roleRaw === "user" || roleRaw === "assistant") {
       out.push({ role: roleRaw, content });
@@ -99,24 +147,24 @@ function normalizeHistory(history) {
 function normalizeWealth(raw = {}) {
   const assets = Array.isArray(raw?.assets)
     ? raw.assets.slice(0, 80).map((a) => ({
-        name: String(a?.name || "Asset"),
-        type: String(a?.type || "Other"),
-        value: toNumber(a?.value ?? a?.amount ?? 0, 0)
+        name: cleanText(a?.name || "Asset", 80),
+        type: cleanText(a?.type || "Other", 40),
+        value: round(Math.max(0, clampMoney(a?.value ?? a?.amount ?? 0)), 2)
       }))
     : [];
 
   const liabilities = Array.isArray(raw?.liabilities)
     ? raw.liabilities.slice(0, 80).map((l) => ({
-        name: String(l?.name || "Liability"),
-        type: String(l?.type || "Other"),
-        linkedTo: String(l?.linkedTo || ""),
-        lender: String(l?.lender || ""),
-        originalAmount: toNumber(l?.originalAmount ?? l?.principal ?? l?.amount ?? l?.value ?? 0, 0),
-        outstandingAmount: toNumber(l?.outstandingAmount ?? l?.amount ?? l?.value ?? 0, 0),
-        paidAmount: toNumber(l?.paidAmount ?? 0, 0),
-        amount: toNumber(l?.outstandingAmount ?? l?.amount ?? l?.value ?? 0, 0),
-        emi: toNumber(l?.emi ?? 0, 0),
-        rate: toNumber(l?.rate ?? l?.interest ?? 0, 0)
+        name: cleanText(l?.name || "Liability", 80),
+        type: cleanText(l?.type || "Other", 40),
+        linkedTo: cleanText(l?.linkedTo || "", 120),
+        lender: cleanText(l?.lender || "", 80),
+        originalAmount: round(Math.max(0, clampMoney(l?.originalAmount ?? l?.principal ?? l?.amount ?? l?.value ?? 0)), 2),
+        outstandingAmount: round(Math.max(0, clampMoney(l?.outstandingAmount ?? l?.amount ?? l?.value ?? 0)), 2),
+        paidAmount: round(Math.max(0, clampMoney(l?.paidAmount ?? 0)), 2),
+        amount: round(Math.max(0, clampMoney(l?.outstandingAmount ?? l?.amount ?? l?.value ?? 0)), 2),
+        emi: round(Math.max(0, clampMoney(l?.emi ?? 0)), 2),
+        rate: round(Math.max(0, toNumber(l?.rate ?? l?.interest ?? 0, 0)), 4)
       }))
     : [];
 
@@ -136,19 +184,20 @@ function normalizeWealth(raw = {}) {
 }
 
 function normalizeQuestionnaire(raw = {}) {
+  const r = raw || {};
   return {
-    segment: String(raw?.segment || "").trim().toLowerCase() || null,
-    primaryGoal: String(raw?.primaryGoal ?? raw?.goal ?? "").trim().toLowerCase() || null,
-    monthlyIncome: toNumber(raw?.monthlyIncome ?? raw?.income ?? 0, 0),
-    fixedExpenses: toNumber(raw?.fixedExpenses ?? raw?.monthly_fixed_expenses ?? 0, 0),
-    monthlyDebtPayment: toNumber(raw?.monthlyDebtPayment ?? raw?.debtPayment ?? 0, 0),
-    emergencyFundMonths: toNumber(raw?.emergencyFundMonths ?? raw?.emergencyMonths ?? 0, 0),
-    riskStyle: String(raw?.riskStyle ?? raw?.risk ?? "").trim().toLowerCase() || null,
-    adviceStyle: String(raw?.adviceStyle ?? raw?.style ?? "").trim().toLowerCase() || null,
-    monthlyAllowance: toNumber(raw?.monthlyAllowance ?? raw?.allowance ?? 0, 0),
-    educationLoanEmi: toNumber(raw?.educationLoanEmi ?? raw?.educationLoan ?? 0, 0),
-    graduationYear: toNumber(raw?.graduationYear ?? raw?.gradYear ?? 0, 0),
-    currentConcern: String(raw?.currentConcern ?? raw?.concern ?? "").trim().slice(0, 300)
+    segment: cleanText(r.segment || "", 40).toLowerCase() || null,
+    primaryGoal: cleanText(r.primaryGoal ?? r.goal ?? "", 60).toLowerCase() || null,
+    monthlyIncome: round(Math.max(0, clampMoney(r.monthlyIncome ?? r.income ?? 0)), 2),
+    fixedExpenses: round(Math.max(0, clampMoney(r.fixedExpenses ?? r.monthly_fixed_expenses ?? 0)), 2),
+    monthlyDebtPayment: round(Math.max(0, clampMoney(r.monthlyDebtPayment ?? r.debtPayment ?? 0)), 2),
+    emergencyFundMonths: Math.max(0, toNumber(r.emergencyFundMonths ?? r.emergencyMonths ?? 0, 0)),
+    riskStyle: cleanText(r.riskStyle ?? r.risk ?? "", 40).toLowerCase() || null,
+    adviceStyle: cleanText(r.adviceStyle ?? r.style ?? "", 40).toLowerCase() || null,
+    monthlyAllowance: round(Math.max(0, clampMoney(r.monthlyAllowance ?? r.allowance ?? 0)), 2),
+    educationLoanEmi: round(Math.max(0, clampMoney(r.educationLoanEmi ?? r.educationLoan ?? 0)), 2),
+    graduationYear: Math.max(0, toNumber(r.graduationYear ?? r.gradYear ?? 0, 0)),
+    currentConcern: cleanText(r.currentConcern ?? r.concern ?? "", 300)
   };
 }
 
@@ -156,26 +205,25 @@ function normalizeProfile(raw = {}) {
   const questionnaire = normalizeQuestionnaire(raw?.questionnaire ?? raw?.aiQuestionnaire ?? raw?.ai_questionnaire ?? {});
   const wealth = normalizeWealth(raw?.wealth || {});
   const subscriptions = normalizeSubscriptions(raw?.subscriptions || []);
-  const totals = raw?.totals || {};
+  const txs = normalizeTransactions(raw?.txs);
+  const txTotals = totalFromTxs(txs);
   const fallbackIncome = questionnaire.monthlyIncome + (questionnaire.segment === "student" ? questionnaire.monthlyAllowance : 0);
   const fallbackSpent = questionnaire.fixedExpenses + questionnaire.monthlyDebtPayment + (questionnaire.segment === "student" ? questionnaire.educationLoanEmi : 0);
-  const incomeFromTotals = toNumber(totals.income, 0);
-  const spentFromTotals = toNumber(totals.spent, 0);
-  const income = incomeFromTotals > 0 ? incomeFromTotals : fallbackIncome;
-  const spent = spentFromTotals > 0 ? spentFromTotals : fallbackSpent;
-  const saved = totals.saved !== undefined ? toNumber(totals.saved, income - spent) : income - spent;
+  const income = txTotals.income > 0 ? txTotals.income : fallbackIncome;
+  const spent = txTotals.spent > 0 ? txTotals.spent : fallbackSpent;
+  const saved = txTotals.income > 0 || txTotals.spent > 0 ? txTotals.saved : income - spent;
 
   return {
-    name: String(raw?.name || "User"),
-    currency: String(raw?.currency || "INR").split(" ")[0] || "INR",
-    incomeTarget: toNumber(raw?.income_target ?? raw?.income ?? 0, 0),
+    name: cleanText(raw?.name || "User", 60) || "User",
+    currency: cleanText(raw?.currency || "INR", 12).split(" ")[0] || "INR",
+    incomeTarget: round(Math.max(0, clampMoney(raw?.income_target ?? raw?.income ?? 0)), 2),
     totals: {
       income,
       spent,
       saved,
       rate: income > 0 ? round((saved / income) * 100, 1) : 0
     },
-    txs: normalizeTransactions(raw?.txs),
+    txs,
     budgets: normalizeBudgets(raw?.budgets),
     goals: normalizeGoals(raw?.goals),
     subscriptions,
@@ -440,7 +488,7 @@ async function callOpenAI(apiKey, message, profile, snapshot, reallocation, weal
     ];
   }
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -484,7 +532,8 @@ function isLikelyFinanceMessage(message) {
     "money", "finance", "financial", "budget", "expense", "spend", "saving", "savings", "invest",
     "stock", "mutual", "fund", "sip", "etf", "loan", "debt", "emi", "income",
     "net worth", "asset", "liability", "subscription", "credit", "interest", "tax",
-    "portfolio", "insurance", "retirement", "emergency fund"
+    "portfolio", "insurance", "retirement", "emergency fund", "goal", "goals", "target", "plan", "milestone",
+    "month", "week", "doing", "status", "summary", "health"
   ];
   return terms.some((term) => m.includes(term));
 }
@@ -553,7 +602,7 @@ async function fetchGeneralKnowledgeReply(message) {
   async function fetchSummaryByTitle(title) {
     const encoded = encodeURIComponent(String(title).replace(/\s+/g, "_"));
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    const res = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });
     if (!res.ok) return null;
     const data = await res.json();
     const summary = shortText(data?.extract || "", 440);
@@ -566,7 +615,7 @@ async function fetchGeneralKnowledgeReply(message) {
       if (direct) return `${direct} If you want, I can also connect this topic to your money decisions.`;
 
       const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`;
-      const searchRes = await fetch(searchUrl, { headers: { Accept: "application/json" } });
+      const searchRes = await fetchWithTimeout(searchUrl, { headers: { Accept: "application/json" } });
       if (!searchRes.ok) continue;
       const searchJson = await searchRes.json();
       const firstTitle = searchJson?.query?.search?.[0]?.title;
@@ -623,6 +672,12 @@ function localFallbackReply(message, profile, snapshot, reallocation, wealthGuid
     && has("property", "properties", "real estate", "realestate", "house", "home")
     && has("which", "better", "profitable", "profit", "returns", "vs", "versus", "or")
   );
+  const investmentAdviceIntent = (
+    has("stock", "stocks", "mutual", "fund", "invest", "portfolio", "share", "buy") 
+    && has("what", "how", "best", "should", "starter", "starters", "beginner", "suggest", "recommend", "start", "where")
+    && !marketCompareIntent
+    && !conceptIntent
+  );
 
   const conceptTopic = (() => {
     if (has("stock market", "stockmarket", "share market", "equity market")) return "stock_market";
@@ -651,6 +706,11 @@ function localFallbackReply(message, profile, snapshot, reallocation, wealthGuid
     parts.push("In uncertain economies, a diversified mix is often safer than going all-in on one asset.");
     if (monthlyFree > 0) parts.push(`Based on current free cash around ${sym}${monthlyFree}/month, start with diversified market exposure first, then add property when down payment and emergency fund are strong.`);
     parts.push("Share your investment horizon and risk comfort, and I will suggest a precise split.");
+  } else if (investmentAdviceIntent) {
+    if (monthlyFree > 0) parts.push(`With your estimated free monthly cashflow of ${sym}${monthlyFree}, a balanced, low-cost approach is safest.`);
+    parts.push("For beginners with smaller starting amounts (like ₹100), direct stock picking carries high volatility and brokerage fees can easily erase your margins.");
+    parts.push("Instead, consider starting with low-cost Broad-Market Index Mutual Funds or ETFs using SIPs (Systematic Investment Plans) for immediate diversification without the hassle of stock-picking.");
+    parts.push("Early on, focus purely on building the habit of consistent investing rather than trying to time the market, while ensuring you keep an emergency fund safely in the bank.");
   } else if (conceptIntent && conceptTopic) {
     const explain = {
       stock_market: "Stock market is a marketplace where investors buy and sell ownership shares of companies. When company value grows, share prices may rise, and some companies also pay dividends.",
@@ -804,24 +864,29 @@ function localFallbackReply(message, profile, snapshot, reallocation, wealthGuid
     parts.push("Try asking: what is inflation, where am I overspending, which subscriptions should I cancel, or how much loan is left.");
   }
 
-  if (conceptIntent || marketCompareIntent) {
-    parts.push("This is educational information.");
+  if (conceptIntent || marketCompareIntent || !isLikelyFinanceMessage(message) || investmentAdviceIntent) {
     return parts.join(" ");
   }
 
   if (q.primaryGoal && !has("goal", "target")) parts.push(`Primary goal on record: ${q.primaryGoal.replace(/_/g, " ")}.`);
   if (q.currentConcern && !has("concern", "problem")) parts.push(`Noted concern: ${q.currentConcern}.`);
-  parts.push("This is educational guidance, not personalized investment advice.");
   return parts.join(" ");
 }
 
 async function runFlowAI(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("Invalid payload object.");
+  }
+
   const rawApiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY;
   const apiKey = String(rawApiKey || "").trim().replace(/^['"]|['"]$/g, "");
 
-  const message = String(payload?.message || "").trim();
+  const message = cleanText(payload?.message || "", MAX_MESSAGE_LEN);
   if (!message) {
     throw new Error("Message is required.");
+  }
+  if (message.length > MAX_MESSAGE_LEN) {
+    throw new Error("Message too long.");
   }
 
   const profile = normalizeProfile(payload?.profile || {});

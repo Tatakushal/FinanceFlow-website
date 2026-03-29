@@ -1,100 +1,91 @@
 const { runFlowAI } = require("../server/flowai-core");
-
-function parseLooseJson(text) {
-  const variants = [
-    text,
-    text.replace(/^\uFEFF/, ""),
-    text.replace(/^'+|'+$/g, ""),
-    text.replace(/^"+|"+$/g, "")
-  ];
-
-  for (const candidate of variants) {
-    try {
-      return JSON.parse(candidate);
-    } catch (_err) {}
-  }
-
-  return null;
-}
-
-function parseFormEncoded(text) {
-  const params = new URLSearchParams(text);
-  if (![...params.keys()].length) {
-    return null;
-  }
-
-  const message = params.get("message");
-  const profileRaw = params.get("profile");
-  if (!message && !profileRaw) {
-    return null;
-  }
-
-  let profile = {};
-  if (profileRaw) {
-    const parsedProfile = parseLooseJson(profileRaw);
-    profile = parsedProfile && typeof parsedProfile === "object" ? parsedProfile : {};
-  }
-
-  return { message: message || "", profile };
-}
+const {
+  setSecurityHeaders,
+  enforceRateLimit,
+  isOriginAllowed,
+  validatePayload,
+  MAX_BODY_BYTES
+} = require("../server/security");
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = "";
+    let tooLarge = false;
 
     req.on("data", (chunk) => {
+      if (tooLarge) return;
       raw += chunk.toString("utf8");
-      if (raw.length > 1_000_000) {
-        reject(new Error("Request body too large."));
+      if (raw.length > MAX_BODY_BYTES) {
+        tooLarge = true;
+        reject(new Error("Request payload exceeeds size limits."));
       }
     });
 
     req.on("end", () => {
+      if (tooLarge) return;
       const trimmed = raw.trim();
       if (!trimmed) {
-        resolve({});
+        reject(new Error("Empty request body."));
         return;
       }
-
-      const parsedJson = parseLooseJson(trimmed);
-      if (parsedJson && typeof parsedJson === "object") {
-        resolve(parsedJson);
-        return;
+      try {
+        const parsed = JSON.parse(trimmed);
+        resolve(parsed);
+      } catch (_err) {
+        reject(new Error("Invalid JSON struct."));
       }
-
-      const parsedForm = parseFormEncoded(trimmed);
-      if (parsedForm && typeof parsedForm === "object") {
-        resolve(parsedForm);
-        return;
-      }
-
-      reject(new Error(`Request body is not valid JSON. Raw: ${trimmed.slice(0, 180)}`));
     });
 
-    req.on("error", () => {
-      reject(new Error("Unable to read request body."));
-    });
+    req.on("error", () => reject(new Error("Network error during stream read.")));
   });
 }
 
 module.exports = async function handler(req, res) {
+  setSecurityHeaders(res);
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed." });
+  }
+
+  const ctype = String(req.headers["content-type"] || "").toLowerCase();
+  if (!ctype.includes("application/json")) {
+    return res.status(415).json({ error: "Unsupported media." });
+  }
+
+  // Same-origin deployments
+  if (!isOriginAllowed(req.headers)) {
+     // Allow local development dynamically
+     if (String(req.headers.origin || "").includes("localhost")) {
+         // Pass
+     } else {
+        return res.status(403).json({ error: "Origin missing or untrusted." });
+     }
+  }
+
+  const rate = enforceRateLimit(req.headers, req.socket?.remoteAddress);
+  if (!rate.ok) {
+    res.setHeader("Retry-After", String(rate.retryAfterSec));
+    return res.status(429).json({ error: "Rate limit triggered. Pause further attempts." });
   }
 
   try {
     const body = await readJsonBody(req);
+    validatePayload(body);
     const result = await runFlowAI(body);
     return res.status(200).json(result);
   } catch (err) {
-    console.error("/api/flowai error", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    const isClientInputError = /not valid json|too large|unable to read request body/i.test(message);
+    console.error("Vercel route internal crash protection caught an error:", err.message);
+    
+    // Static Safe Error mapping
+    const errMessage = err instanceof Error ? err.message : "Internal Error";
+    if (errMessage.includes("size limits") || errMessage.includes("Empty") || errMessage.includes("Invalid") || errMessage.includes("required") || errMessage.includes("too long")) {
+       return res.status(400).json({ error: errMessage });
+    }
 
-    return res.status(isClientInputError ? 400 : 500).json({
-      error: isClientInputError ? "Invalid request payload." : "Unable to process FlowAI request.",
-      details: message
+    // Never bubble up backend system strings like line errors, fetch failures to OpenAI, etc.
+    return res.status(500).json({
+      error: "Unable to process secure AI response."
     });
   }
 };
