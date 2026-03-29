@@ -468,7 +468,18 @@ select.finput option{background:#111C2D;color:#fff;}
 @keyframes tdot{0%,80%,100%{opacity:.3;}40%{opacity:1;}}
 .ai-card{background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px;}
 .ai-card-ttl{font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
-.ai-card-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);}
+.ai-card-row{display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);}
+.icon-box{
+  width:42px;height:42px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-size:22px;transition:all 0.2s;
+}
+.icon-box-primary{background:rgba(0,0,0,0.1);color:#000;}
+.icon-box-surface{background:var(--surface3);border:1px solid var(--border);color:var(--primary);}
+.icon-box-blue{background:var(--surface3);border:1px solid var(--border);color:var(--accent);}
+.icon-box-ai{background:linear-gradient(135deg,var(--primary),var(--accent));color:#000;box-shadow:0 0 15px var(--primary-glow);}
+.quick-actions a:hover .icon-box{transform:scale(1.1);}
+.rings-grid{display:flex;justify-content:space-around;gap:12px;padding:8px 0;}
 .ai-card-row:last-child{border-bottom:none;}
 .ai-card-row span:first-child{color:var(--text-muted);}
 .ai-card-row span:last-child{color:#fff;font-weight:700;}
@@ -623,7 +634,11 @@ select.finput option{background:#111C2D;color:#fff;}
   .grid-2,.grid-3,.grid-4,.form-row,.balance-cols,.add-tx-layout{grid-template-columns:1fr;}
 
   /* Quick Actions 2-col on mobile */
-  .quick-actions{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+  .quick-actions{grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+  .quick-actions a{padding:14px 16px;min-height:80px;flex-direction:column;align-items:flex-start;gap:10px;justify-content:center;}
+  .quick-actions a .icon-box{width:36px;height:36px;font-size:18px;}
+  .quick-actions a div div:first-child{font-size:14px !important;}
+  .quick-actions a div div:last-child{display:none;} /* Hide subtexts on small mobile to avoid wrap */
 
   /* Balance */
   .balance-hero{padding:22px 18px;}
