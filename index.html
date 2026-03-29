@@ -8,10 +8,15 @@
 <link rel="stylesheet" href="css/global.css">
 <meta name="theme-color" content="#060A12">
 <script>
-  // AUTO-REDIRECT IF LOGGED IN
-  if (localStorage.getItem('ff_user')) {
-    window.location.href = 'app/dashboard.html';
-  }
+  // UPDATE BUTTONS IF LOGGED IN
+  document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('ff_user')) {
+      document.querySelectorAll('a[href*="signin.html"], a[href*="signup.html"]').forEach(a => {
+        a.href = 'app/dashboard.html';
+        if (a.textContent.includes('Sign In')) a.textContent = 'Go to Dashboard';
+      });
+    }
+  });
 </script>
 <style>
 /* DYNAMIC BACKGROUND & ANIMATIONS */
