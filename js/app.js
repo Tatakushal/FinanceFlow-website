@@ -197,6 +197,11 @@ function buildSidebar(active) {
   const el = document.getElementById('sidebar');
   if (!el) return;
 
+  // Setup Sidebar Structure (Ensure it's a direct child of body for sharp focus)
+  if (el.parentElement !== document.body) {
+    document.body.prepend(el);
+  }
+
   // Setup Mobile Menu Button if not exists
   const topbar = document.querySelector('.topbar');
   if (topbar && !document.querySelector('.tb-menu')) {
@@ -210,11 +215,14 @@ function buildSidebar(active) {
     topbar.prepend(menuBtn);
     
     // Setup Backdrop Overlay
-    if (!document.getElementById('sidebar-overlay')) {
-      const overlay = document.createElement('div');
+    let overlay = document.getElementById('sidebar-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
       overlay.id = 'sidebar-overlay';
       overlay.className = 'sidebar-overlay';
       overlay.onclick = () => FF.toggleSidebar(false);
+      document.body.appendChild(overlay);
+    } else if (overlay.parentElement !== document.body) {
       document.body.appendChild(overlay);
     }
   }
