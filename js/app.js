@@ -222,7 +222,10 @@ function buildSidebar(active) {
       overlay.className = 'sidebar-overlay';
       overlay.onclick = () => FF.toggleSidebar(false);
       document.body.appendChild(overlay);
-    } else if (overlay.parentElement !== document.body) {
+    } 
+    
+    // Always move overlay to body for global positioning
+    if (overlay.parentElement !== document.body) {
       document.body.appendChild(overlay);
     }
   }

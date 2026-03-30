@@ -597,17 +597,19 @@ select.finput option{background:#111C2D;color:#fff;}
     border-right:1px solid rgba(255,255,255,0.1);
     transform:translateX(-100%);
     box-shadow:30px 0 60px rgba(0,0,0,0.8);
-    z-index:9000 !important; /* Extremely high to escape any potential filters */
+    z-index:9999 !important; /* Highest possible to stay above everything */
     background:#0B121E !important; 
     backdrop-filter:none !important;
     -webkit-backdrop-filter:none !important;
     visibility:visible;
+    pointer-events: auto !important; /* Ensure buttons are clickable */
   }
   .sidebar-open .sidebar{transform:translateX(0); visibility:visible;}
   .sidebar-open .app-layout{filter:blur(5px); pointer-events:none;} /* Blur the LAYOUT, but sidebar is outside it now! */
   .sidebar-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.5);
-    z-index:8500;opacity:0;pointer-events:none;transition:opacity .3s;
+    z-index:9998; /* Just below sidebar */
+    opacity:0;pointer-events:none;transition:opacity .3s;
     backdrop-filter:none;
   }
   .sidebar-overlay.on{opacity:1;pointer-events:auto;}

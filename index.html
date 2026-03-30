@@ -8,39 +8,14 @@
 <link rel="stylesheet" href="css/global.css">
 <meta name="theme-color" content="#060A12">
 <script>
-  // SMART REDIRECTION & AUTH CHECK
-  document.addEventListener('DOMContentLoaded', () => {
-    const user = localStorage.getItem('ff_user');
-    if (user) {
-      document.querySelectorAll('a[href*="signin.html"], a[href*="signup.html"]').forEach(a => {
-        a.href = 'app/dashboard.html';
-        if (a.textContent.includes('Get Started') || a.textContent.includes('Sign In')) {
-          a.textContent = 'Go to Dashboard →';
-        }
-      });
-      // Hide input if logged in
-      const inputSection = document.getElementById('smart-auth-section');
-      if (inputSection) inputSection.style.display = 'none';
-    }
-  });
-
-  function handleSmartAuth() {
-    const emailInput = document.getElementById('hero-email');
-    if (!emailInput) return;
-    const email = emailInput.value.trim();
-    if (!email) { alert('Please enter your email to continue'); return; }
-    
-    if (!email.includes('@')) { alert('Please enter a valid email'); return; }
-
-    const exists = !!localStorage.getItem(`ff_data_${email.toLowerCase()}`);
-    // Redirect with email param to either signin or signup
-    const dest = exists ? 'app/signin.html' : 'app/signup.html';
-    window.location.href = dest + '?email=' + encodeURIComponent(email);
+  function checkLogin() {
+    if (localStorage.getItem('ff_user')) location.href = 'app/dashboard.html';
   }
+  document.addEventListener('DOMContentLoaded', checkLogin);
 </script>
 <style>
 /* DYNAMIC BACKGROUND & ANIMATIONS */
-body { overflow: hidden; }
+body { overflow-x: hidden; overflow-y: auto; background: #060A12; }
 
 /* Smart Auth Input */
 .smart-input-group {
@@ -177,9 +152,9 @@ body { overflow: hidden; }
 
 .auth-logo { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: inline-flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 12px 40px var(--primary-glow); margin-bottom: 20px; animation: float 6s ease-in-out infinite; border: 1px solid rgba(255,255,255,0.2); }
 
-h1 { font-family: var(--font-display); font-size: clamp(38px, 8vw, 64px); font-weight: 800; color: #fff; margin-bottom: 24px; letter-spacing: -2px; line-height: 1.1; }
+h1 { font-family: var(--font-display); font-size: clamp(38px, 8vw, 64px); font-weight: 800; color: #fff; margin-bottom: 12px; letter-spacing: -2px; line-height: 1.1; }
 h1 span { background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-p { font-size: 18px; color: var(--text-muted); line-height: 1.6; margin-bottom: 48px; font-family: var(--font-body); max-width: 600px; margin-inline: auto; }
+p { font-size: 18px; color: var(--text-muted); line-height: 1.6; margin-bottom: 40px; font-family: var(--font-body); max-width: 360px; margin-inline: auto; opacity: 0.8; }
 
 /* Buttons */
 .auth-actions { display: flex; flex-direction: column; gap: 16px; }
@@ -269,22 +244,13 @@ p { font-size: 18px; color: var(--text-muted); line-height: 1.6; margin-bottom: 
     <h1>Finance<span>Flow</span></h1>
     <p>The AI-powered personal finance app that actually knows your money.</p>
     
-    <div id="smart-auth-section">
-      <div class="smart-input-group">
-        <input type="email" id="hero-email" class="hero-input" placeholder="Enter your email address...">
-        <button class="btn-smart" onclick="handleSmartAuth()">Continue →</button>
-      </div>
-      <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 24px;">
-        Join 10,000+ users saving more every day.
-      </div>
+    <div class="auth-actions">
+      <a href="app/signin.html" class="btn-auth-primary">Sign In to Dashboard</a>
+      <a href="app/signup.html" class="btn-auth-secondary">Create Free Account —></a>
     </div>
     
-    <div class="auth-actions">
-      <a href="app/signin.html" class="btn-auth-primary">View Features ↓</a>
-    </div>
-
-    <div class="auth-footer" style="font-size: 14px; margin-top: 24px;">
-      Free forever · No credit card · Works offline
+    <div class="auth-footer">
+      Private & Secure · <a href="#">Terms</a> · <a href="#">Privacy</a>
     </div>
   </div>
 
