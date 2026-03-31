@@ -93,22 +93,41 @@
 <div class="toast" id="ff-toast"></div>
 <script src="../js/app.js"></script>
 <script>
-if (!FF.isLoggedIn()) location.href = 'signin.html';
-FF.initializeAppearance();
-const u = FF.getUser(), d = FF.data, t = FF.getTotals();
-document.getElementById('greet-name').textContent = u?.name?.split(' ')[0] || 'there';
-document.getElementById('tot-inc').textContent = FF.fmt(t.income);
-document.getElementById('tot-sp').textContent = FF.fmt(t.spent);
-document.getElementById('tot-sv').textContent = FF.fmt(t.saved);
-document.getElementById('bal').textContent = FF.fmt(Math.max(0, t.saved));
-if (t.income > 0) {
-  document.getElementById('bal-growth').textContent = '↑ Saving ' + t.rate + '% of income this month';
-  document.getElementById('ai-insight-text').textContent = t.spent > 0
-    ? 'You\'ve spent ' + FF.fmt(t.spent) + ' and saved ' + t.rate + '% this month. Keep it up! 🎉'
-    : 'Great start! Add your expenses to see personalised insights 💡';
-}
-buildSidebar('home');
-buildRings('rings', d.budgets, 'reports.html');
-buildTxList('recent-txs', d.txs, 6);
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof FF === "undefined") {
+    console.error("FF is not loaded");
+    return;
+  }
+
+  if (!FF.isLoggedIn()) {
+    location.href = 'signin.html';
+    return;
+  }
+
+  FF.initializeAppearance();
+
+  const u = FF.getUser(), d = FF.data, t = FF.getTotals();
+
+  document.getElementById('greet-name').textContent =
+    u?.name?.split(' ')[0] || 'there';
+
+  document.getElementById('tot-inc').textContent = FF.fmt(t.income);
+  document.getElementById('tot-sp').textContent = FF.fmt(t.spent);
+  document.getElementById('tot-sv').textContent = FF.fmt(t.saved);
+  document.getElementById('bal').textContent = FF.fmt(Math.max(0, t.saved));
+
+  if (t.income > 0) {
+    document.getElementById('bal-growth').textContent =
+      '↑ Saving ' + t.rate + '% of income this month';
+
+    document.getElementById('ai-insight-text').textContent =
+      t.spent > 0
+        ? 'You\'ve spent ' + FF.fmt(t.spent) + ' and saved ' + t.rate + '% this month. Keep it up! 🎉'
+        : 'Great start! Add your expenses to see personalised insights 💡';
+  }
+
+  buildSidebar('home');
+  buildRings('rings', d.budgets, 'reports.html');
+  buildTxList('recent-txs', d.txs, 6);
+});
 </script>
-</body></html>
