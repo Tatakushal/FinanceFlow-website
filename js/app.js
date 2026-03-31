@@ -67,7 +67,14 @@ const FF = {
   get data() {
     const key = this.getDataKey();
     const s = localStorage.getItem(key);
-    if (!s) return null;
+    if (!s) {
+  const u = this.getUser();
+  if (!u) return null;
+
+  const fresh = this.freshData(u.name, u.email, 0);
+  this.save(fresh);
+  return fresh;
+}
     try {
       return this.ensureDataShape(JSON.parse(s));
     } catch (_err) {
