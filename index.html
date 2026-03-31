@@ -12,12 +12,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     const user = localStorage.getItem('ff_user');
     if (user) {
-      document.querySelectorAll('a[href*="signin.html"], a[href*="signup.html"]').forEach(a => {
-        a.href = 'app/dashboard.html';
-        if (a.textContent.includes('Get Started') || a.textContent.includes('Sign In')) {
-          a.textContent = 'Go to Dashboard →';
-        }
-      });
+  window.location.href = "app/dashboard.html";
+  return;
+}
       // Hide input if logged in
       const inputSection = document.getElementById('smart-auth-section');
       if (inputSection) inputSection.style.display = 'none';
