@@ -110,7 +110,7 @@ img,svg,canvas{max-width:100%;}
   border-bottom:1px solid rgba(255,255,255,0.06);
   gap:12px;
 }
-.tb-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;}
+.tb-logo-text{font-family:var(--fd);font-size:clamp(16px,2vw,20px);font-weight:800;color:#fff;letter-spacing:-0.3px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tb-logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 16px var(--primary-glow);}
 .tb-logo-text{font-family:var(--fd);font-size:19px;font-weight:800;color:#fff;letter-spacing:-0.3px;}
 .tb-logo-text span{color:var(--primary);}
