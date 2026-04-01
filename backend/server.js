@@ -13,6 +13,11 @@ app.post("/api/flowai", async (req, res) => {
     try {
         const { message } = req.body;
 
+        const geminiApiKey = String(process.env.GEMINI_API_KEY || "").trim();
+        if (!geminiApiKey) {
+            return res.status(500).json({ error: "GEMINI_API_KEY is not configured." });
+        }
+
         const prompt = `
 You are FlowAI, a strict financial advisor.
 
@@ -33,7 +38,7 @@ Now give answer:
 `;
 
         const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.AIzaSyBGg7zSG1EvdTNvLTh2NNHGiRU4Z - rvo5Y}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
             {
                 contents: [
                     {

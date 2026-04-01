@@ -10,14 +10,21 @@
 <script>
   // SMART REDIRECTION & AUTH CHECK
   document.addEventListener('DOMContentLoaded', () => {
-    const user = localStorage.getItem('ff_user');
-    if (user) {
-  window.location.href = "app/dashboard.html";
-  return;
-}
-      // Hide input if logged in
-      const inputSection = document.getElementById('smart-auth-section');
-      if (inputSection) inputSection.style.display = 'none';
+    let user = null;
+    try {
+      user = JSON.parse(localStorage.getItem('ff_user') || 'null');
+    } catch (_err) {
+      user = null;
+    }
+
+    // If already logged in, keep the landing visible (no auto-redirect).
+    // Just update the CTA to go straight to the dashboard.
+    if (user && user.email) {
+      const cta = document.querySelector('.btn-auth-primary');
+      if (cta) {
+        cta.setAttribute('href', 'app/dashboard.html');
+        cta.textContent = 'Go to Dashboard →';
+      }
     }
   });
 
@@ -174,7 +181,7 @@ body { overflow: hidden; }
 
 .auth-logo { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: inline-flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 12px 40px var(--primary-glow); margin-bottom: 20px; animation: float 6s ease-in-out infinite; border: 1px solid rgba(255,255,255,0.2); }
 
-h1 { font-family: var(--font-display); font-size: clamp(38px, 8vw, 64px); font-weight: 800; color: #fff; margin-bottom: 24px; letter-spacing: -2px; line-height: 1.1; }
+h1 { font-family: var(--font-display); font-size: clamp(34px, 7.5vw, 56px); font-weight: 800; color: #fff; margin-bottom: 24px; letter-spacing: -2px; line-height: 1.1; max-width: 100%; overflow-wrap: anywhere; }
 h1 span { background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 p { font-size: 18px; color: var(--text-muted); line-height: 1.6; margin-bottom: 48px; font-family: var(--font-body); max-width: 600px; margin-inline: auto; }
 

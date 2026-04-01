@@ -110,6 +110,7 @@ img,svg,canvas{max-width:100%;}
   border-bottom:1px solid rgba(255,255,255,0.06);
   gap:12px;
 }
+.tb-logo{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0;}
 .tb-logo-text{font-family:var(--fd);font-size:clamp(16px,2vw,20px);font-weight:800;color:#fff;letter-spacing:-0.3px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tb-logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 16px var(--primary-glow);}
 .tb-logo-text{font-family:var(--fd);font-size:clamp(16px,2vw,20px);font-weight:800;color:#fff;letter-spacing:-0.3px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -124,7 +125,8 @@ img,svg,canvas{max-width:100%;}
 .tb-action{font-size:14px;color:var(--accent);font-weight:700;cursor:pointer;background:var(--accent-dim);border:1px solid rgba(61,127,255,.25);padding:9px 18px;border-radius:var(--radius-sm);font-family:var(--fb);transition:all .2s;}
 .tb-action:hover{background:var(--accent);color:#fff;}
 .tb-right{display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.tb-user{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-muted);font-weight:500;}
+.tb-user{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-muted);font-weight:500;min-width:0;}
+#greet-name,#tb-username{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
 .tb-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--primary));display:flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer;text-decoration:none;box-shadow:0 2px 12px rgba(0,229,160,0.2);}
 .btn-tb-primary{padding:9px 20px;background:var(--primary);color:#000;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--fd);text-decoration:none;display:inline-flex;align-items:center;letter-spacing:0.2px;}
 .btn-tb-primary:hover{opacity:.9;}
@@ -604,7 +606,7 @@ select.finput option{background:#111C2D;color:#fff;}
     visibility:visible;
   }
   .sidebar-open .sidebar{transform:translateX(0); visibility:visible;}
-  .sidebar-open .app-layout{filter:blur(5px); pointer-events:none;} /* Blur the LAYOUT, but sidebar is outside it now! */
+  .sidebar-open .main-content{filter:blur(5px); pointer-events:none;}
   .sidebar-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.5);
     z-index:8500;opacity:0;pointer-events:none;transition:opacity .3s;

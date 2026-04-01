@@ -1,8 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Dashboard — Finance Flow</title><link rel="stylesheet" href="../css/app.css"></head>
 <body>
 <div class="topbar">
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
-  <aside class="sidebar" id="sidebar"></aside>
   <a href="../index.html" class="tb-logo"><div class="tb-logo-icon">⚡</div><div class="tb-logo-text">Finance<span>Flow</span></div></a>
   <div class="tb-right">
     <div class="tb-user">
@@ -12,6 +10,7 @@
   </div>
 </div>
 <div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
   <main class="main-content page-in">
     <!-- Balance Hero -->
     <div class="balance-hero">
@@ -93,7 +92,7 @@
 <div class="toast" id="ff-toast"></div>
 <script src="../js/app.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+function initDashboard() {
   if (typeof FF === "undefined") {
     console.error("FF not loaded");
     return;
@@ -137,5 +136,14 @@ document.addEventListener("DOMContentLoaded", () => {
   } catch (err) {
     console.error("Dashboard crash:", err);
   }
+}
+
+initDashboard();
+
+// Re-run when returning via back/forward cache so sidebar doesn't disappear.
+window.addEventListener("pageshow", (e) => {
+  if (e && e.persisted) initDashboard();
 });
 </script>
+</body>
+</html>
