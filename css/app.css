@@ -582,6 +582,7 @@ select.finput option{background:#111C2D;color:#fff;}
   .tb-menu{display:flex;}
   .tb-right{margin-left:auto;}
   .tb-user{display:none;} 
+  #greet-name,#tb-username{display:none;}
   .tb-avatar{width:36px;height:36px;font-size:18px;}
   .btn-tb-primary{padding:8px 14px;font-size:13px;}
   .tb-back{padding:8px 12px;font-size:13px;}
