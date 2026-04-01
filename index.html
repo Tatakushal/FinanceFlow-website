@@ -36,6 +36,17 @@
     
     if (!email.includes('@')) { alert('Please enter a valid email'); return; }
 
+    // If another account is currently signed in on this browser, switch cleanly.
+    try {
+      const current = JSON.parse(localStorage.getItem('ff_user') || 'null');
+      const currentEmail = String(current?.email || '').toLowerCase();
+      if (currentEmail && currentEmail !== email.toLowerCase()) {
+        localStorage.removeItem('ff_user');
+      }
+    } catch (_err) {
+      localStorage.removeItem('ff_user');
+    }
+
     const exists = !!localStorage.getItem(`ff_data_${email.toLowerCase()}`);
     // Redirect with email param to either signin or signup
     const dest = exists ? 'app/signin.html' : 'app/signup.html';

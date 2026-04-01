@@ -89,13 +89,19 @@ const FF = {
     localStorage.setItem(key, JSON.stringify(safe));
   },
 
-  isLoggedIn() { return !!localStorage.getItem('ff_user'); },
+  isLoggedIn() { return !!this.getUser(); },
 
   // Called on signup – wipes everything and starts fresh for this user
   signup(name, email, income) {
-    const key = `ff_data_${email.toLowerCase()}`;
-    localStorage.removeItem(key);
-    localStorage.setItem('ff_user', JSON.stringify({name, email}));
+    const lowerEmail = String(email || "").trim().toLowerCase();
+    if (!lowerEmail) throw new Error("Email is required.");
+
+    const key = `ff_data_${lowerEmail}`;
+    if (localStorage.getItem(key)) {
+      throw new Error("An account with this email already exists. Please sign in.");
+    }
+
+    localStorage.setItem("ff_user", JSON.stringify({ name, email }));
     const d = this.freshData(name, email, income);
     this.save(d);
   },
@@ -119,6 +125,69 @@ const FF = {
     }
   },
 
+  authKey(email) {
+    const lowerEmail = String(email || "").trim().toLowerCase();
+    return lowerEmail ? `ff_auth_${lowerEmail}` : "ff_auth";
+  },
+
+  async _sha256Hex(input) {
+    const text = String(input ?? "");
+
+    // Prefer Web Crypto when available (secure contexts like https/localhost)
+    try {
+      if (globalThis.crypto?.subtle?.digest && globalThis.TextEncoder) {
+        const bytes = new TextEncoder().encode(text);
+        const hash = await crypto.subtle.digest("SHA-256", bytes);
+        return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      }
+    } catch (_err) {
+      // fall through to non-crypto fallback
+    }
+
+    // Fallback (not cryptographically secure, but avoids plain-text storage)
+    let h = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return `fnv1a_${(h >>> 0).toString(16)}`;
+  },
+
+  async setPassword(email, password) {
+    const lowerEmail = String(email || "").trim().toLowerCase();
+    const pass = String(password || "");
+    if (!lowerEmail || !pass) return false;
+
+    const hash = await this._sha256Hex(`${lowerEmail}:${pass}`);
+    localStorage.setItem(this.authKey(lowerEmail), hash);
+    return true;
+  },
+
+  hasPassword(email) {
+    const lowerEmail = String(email || "").trim().toLowerCase();
+    if (!lowerEmail) return false;
+    return !!localStorage.getItem(this.authKey(lowerEmail));
+  },
+
+  async verifyPassword(email, password, { enrollIfMissing = false } = {}) {
+    const lowerEmail = String(email || "").trim().toLowerCase();
+    const pass = String(password || "");
+    if (!lowerEmail || !pass) return false;
+
+    const key = this.authKey(lowerEmail);
+    const stored = String(localStorage.getItem(key) || "");
+    if (!stored) {
+      if (enrollIfMissing) {
+        await this.setPassword(lowerEmail, pass);
+        return true;
+      }
+      return true;
+    }
+
+    const hash = await this._sha256Hex(`${lowerEmail}:${pass}`);
+    return hash === stored;
+  },
+
   logout() {
     localStorage.removeItem('ff_user');
   },
@@ -131,7 +200,31 @@ const FF = {
 
   getUser() {
     const u = localStorage.getItem('ff_user');
-    return u ? JSON.parse(u) : null;
+    if (!u) return null;
+    try {
+      return JSON.parse(u);
+    } catch (_err) {
+      return null;
+    }
+  },
+
+  getAccountDataByEmail(email) {
+    const lowerEmail = String(email || "").trim().toLowerCase();
+    if (!lowerEmail) return null;
+
+    const s = localStorage.getItem(`ff_data_${lowerEmail}`);
+    if (!s) return null;
+    try {
+      return this.ensureDataShape(JSON.parse(s));
+    } catch (_err) {
+      return null;
+    }
+  },
+
+  getAccountNameByEmail(email) {
+    const d = this.getAccountDataByEmail(email);
+    const name = String(d?.name || "").trim();
+    return name || null;
   },
 
   addTx(tx) {

@@ -10,10 +10,31 @@ const MAX_RATE_ENTRIES = 5000;
 const REQUESTS_BY_KEY = globalThis.__ffRateLimitMap || new Map();
 globalThis.__ffRateLimitMap = REQUESTS_BY_KEY;
 
-function setSecurityHeaders(resHeadersObj) {
-  resHeadersObj["Cache-Control"] = "no-store";
-  resHeadersObj["Pragma"] = "no-cache";
-  resHeadersObj["X-Content-Type-Options"] = "nosniff";
+function setHeader(target, key, value) {
+  if (!target) return;
+
+  if (typeof target.setHeader === "function") {
+    target.setHeader(key, value);
+    return;
+  }
+
+  if (typeof target.set === "function") {
+    target.set(key, value);
+    return;
+  }
+
+  try {
+    target[key] = value;
+  } catch (_err) {
+    // ignore
+  }
+}
+
+function setSecurityHeaders(resOrHeadersObj) {
+  setHeader(resOrHeadersObj, "Cache-Control", "no-store");
+  setHeader(resOrHeadersObj, "Pragma", "no-cache");
+  setHeader(resOrHeadersObj, "X-Content-Type-Options", "nosniff");
+  setHeader(resOrHeadersObj, "X-Frame-Options", "DENY");
 }
 
 function getClientIp(reqHeaders, socketRemoteAddress) {
@@ -75,22 +96,40 @@ function isOriginAllowed(reqHeaders) {
   const allowNoOrigin = String(process.env.FLOWAI_ALLOW_NO_ORIGIN || "").toLowerCase() === "true";
   const origin = String(reqHeaders.origin || "").trim().toLowerCase();
   
-  // Define allowed production origins dynamically if needed
-  const allowedDeployments = [
-    "vercel.app",
-    "netlify.app",
-    "localhost"
-  ];
+  const allowedOriginList = String(process.env.FLOWAI_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
 
   if (!origin) return allowNoOrigin;
 
   try {
     const url = new URL(origin);
-    const host = url.hostname;
-    // Basic flexible wildcard matching for marketing platform domains
-    if (allowedDeployments.some(domain => host.includes(domain))) {
+    const host = url.hostname.toLowerCase();
+
+    // Allow same-origin by comparing against request Host / X-Forwarded-Host
+    const reqHostRaw = String(reqHeaders["x-forwarded-host"] || reqHeaders.host || "")
+      .split(",")[0]
+      .trim()
+      .toLowerCase();
+    const reqHost = reqHostRaw.split(":")[0]; // strip port if present
+    if (reqHost && host === reqHost) return true;
+
+    // Exact allow-list entries (can be full origin, host, or host suffix)
+    if (allowedOriginList.length) {
+      if (allowedOriginList.includes(origin)) return true;
+      if (allowedOriginList.includes(host)) return true;
+      if (allowedOriginList.some((suffix) => suffix.startsWith(".") && (host === suffix.slice(1) || host.endsWith(suffix)))) {
         return true;
+      }
     }
+
+    // Common trusted hosts (Vercel/Netlify + local dev)
+    const allowedSuffixes = ["vercel.app", "netlify.app"];
+    if (allowedSuffixes.some((suffix) => host === suffix || host.endsWith(`.${suffix}`))) {
+      return true;
+    }
+    if (host === "localhost" || host === "127.0.0.1") return true;
   } catch (err) {
       return false;
   }

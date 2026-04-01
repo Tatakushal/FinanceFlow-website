@@ -26,18 +26,48 @@
 <div class="toast" id="ff-toast"></div>
 <script src="../js/app.js"></script>
 <script>
-if (FF.isLoggedIn()) location.href = 'dashboard.html';
 const urlParams = new URLSearchParams(window.location.search);
 const emailParam = urlParams.get('email');
-if (emailParam) document.getElementById('email').value = decodeURIComponent(emailParam);
+const decodedEmail = emailParam ? decodeURIComponent(emailParam) : '';
+const current = FF.getUser();
 
-function doSignIn() {
+if (decodedEmail) {
+  document.getElementById('email').value = decodedEmail;
+
+  const curEmail = String(current?.email || '').trim().toLowerCase();
+  const wanted = String(decodedEmail || '').trim().toLowerCase();
+  if (curEmail && wanted && curEmail !== wanted) {
+    // Switch accounts cleanly.
+    FF.logout();
+  } else if (curEmail && curEmail === wanted) {
+    location.href = 'dashboard.html';
+  }
+} else if (FF.isLoggedIn()) {
+  location.href = 'dashboard.html';
+}
+
+async function doSignIn() {
   const e = document.getElementById('email').value.trim();
   const p = document.getElementById('pass').value;
   if (!e) { toast('⚠️ Enter your email'); return; }
   if (!p) { toast('⚠️ Enter your password'); return; }
-  const n = e.split('@')[0];
-  const name = n.charAt(0).toUpperCase() + n.slice(1);
+
+  if (!FF.checkAccount(e)) {
+    toast('No account found. Create one first.');
+    setTimeout(() => location.href = 'signup.html?email=' + encodeURIComponent(e), 900);
+    return;
+  }
+
+  const ok = await FF.verifyPassword(e, p, { enrollIfMissing: true });
+  if (!ok) { toast('Incorrect password'); return; }
+
+  const storedName = FF.getAccountNameByEmail(e);
+  const derived = (() => {
+    const n = e.split('@')[0] || '';
+    return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'User';
+  })();
+  const name = storedName || derived;
+
   FF.login(name, e);
   toast('✅ Welcome back, ' + name + '!');
   setTimeout(() => location.href = 'dashboard.html', 700);
