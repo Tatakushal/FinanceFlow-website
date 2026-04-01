@@ -111,9 +111,9 @@ img,svg,canvas{max-width:100%;}
   gap:12px;
 }
 .tb-logo{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0;}
-.tb-logo-text{font-family:var(--fd);font-size:clamp(16px,2vw,20px);font-weight:800;color:#fff;letter-spacing:-0.3px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tb-logo-text{font-family:var(--fd);font-size:clamp(16px,2vw,20px);font-weight:800;color:#fff;letter-spacing:-0.3px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tb-logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 16px var(--primary-glow);}
-.tb-logo-text{font-family:var(--fd);font-size:clamp(16px,2vw,20px);font-weight:800;color:#fff;letter-spacing:-0.3px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tb-logo-text{font-family:var(--fd);font-size:clamp(16px,2vw,20px);font-weight:800;color:#fff;letter-spacing:-0.3px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tb-logo-text span{color:var(--primary);margin-left:2px;}
 .tb-nav{display:flex;align-items:center;gap:4px;}
 .tb-nav a{font-size:15px;color:var(--text-muted);text-decoration:none;padding:8px 14px;border-radius:var(--radius-sm);transition:all .2s;font-weight:500;}
@@ -140,7 +140,7 @@ img,svg,canvas{max-width:100%;}
 .tb-menu:hover{color:#fff;border-color:var(--border-light);}
 
 /* ── SIDEBAR ── */
-.app-layout{display:flex;min-height:calc(100vh - 65px);position:relative;z-index:1;}
+.app-layout{display:flex;min-height:calc(100vh - 65px);position:relative;}
 .sidebar{
   width:240px;
   flex-shrink:0;
@@ -586,6 +586,20 @@ select.finput option{background:#111C2D;color:#fff;}
   .btn-tb-primary{padding:8px 14px;font-size:13px;}
   .tb-back{padding:8px 12px;font-size:13px;}
   .tb-title{font-size:17px;}
+
+  /* Pages with a centered title (e.g., Add Expense/Income) */
+  .topbar.ff-has-title{justify-content:flex-start;}
+  .topbar.ff-has-title .tb-logo{display:none;}
+  .topbar.ff-has-title .tb-back{display:none;}
+  .topbar.ff-has-title .tb-title{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    max-width:62vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
 
   /* Sidebar Mobile — collapsible overlay */
   .app-layout{display:block;}

@@ -299,7 +299,12 @@ function buildSidebar(active) {
 
   // Setup Mobile Menu Button if not exists
   const topbar = document.querySelector('.topbar');
-  if (topbar && !document.querySelector('.tb-menu')) {
+  if (topbar) {
+    topbar.classList.add('ff-has-sidebar');
+    if (topbar.querySelector('.tb-title')) topbar.classList.add('ff-has-title');
+  }
+
+  if (topbar && !topbar.querySelector('.tb-menu')) {
     const menuBtn = document.createElement('div');
     menuBtn.className = 'tb-menu';
     menuBtn.innerHTML = '&#x2630;'; // Hamburger icon
