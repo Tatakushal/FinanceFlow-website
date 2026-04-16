@@ -30,7 +30,6 @@
         <div class="fw"></div>
       </div>
       <button class="btn btn-p btn-full" onclick="doSignup()">Create Account &#8594;</button>
-      <button class="btn btn-s btn-full" style="margin-top:12px;" onclick="restoreBackup()">Restore Backup (.json)</button>
       <div class="divider"><div class="div-line"></div><span class="div-txt">or sign up with</span><div class="div-line"></div></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <button class="btn-social" onclick="socialSignup('Apple')">&#127822; Apple</button>
@@ -62,65 +61,6 @@ if (decodedEmail) {
   }
 } else if (FF.isLoggedIn()) {
   location.href = 'dashboard.html';
-}
-
-function restoreBackup() {
-  const pass = document.getElementById('spass').value;
-  const pass2 = document.getElementById('spass2').value;
-
-  if (!pass || pass.length < 6) return toast('⚠️ Password needs at least 6 characters.');
-  if (pass !== pass2) return toast('⚠️ Passwords do not match.');
-
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json,application/json';
-  input.onchange = (ev) => {
-    const file = ev.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (rev) => {
-      try {
-        const parsed = JSON.parse(String(rev.target?.result || ''));
-        const safe = FF.ensureDataShape(parsed);
-        const backupEmail = String(safe?.email || '').trim();
-
-        if (!backupEmail || !backupEmail.includes('@')) {
-          toast('⚠️ Backup is missing a valid email');
-          return;
-        }
-
-        if (FF.checkAccount(backupEmail)) {
-          toast('Account already exists. Please sign in.');
-          setTimeout(() => location.href = 'signin.html?email=' + encodeURIComponent(backupEmail), 900);
-          return;
-        }
-
-        const email = backupEmail.toLowerCase();
-        const derived = (() => {
-          const n = (email.split('@')[0] || '').trim();
-          return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'User';
-        })();
-        const name = String(safe?.name || '').trim() || derived;
-
-        // Update form so user can see what got restored
-        document.getElementById('sname').value = name;
-        document.getElementById('semail').value = backupEmail;
-
-        safe.email = backupEmail;
-        localStorage.setItem(`ff_data_${email}`, JSON.stringify(safe));
-        await FF.setPassword(email, pass);
-
-        FF.login(name, email);
-        toast('✅ Backup restored!');
-        setTimeout(() => location.href = 'dashboard.html', 700);
-      } catch (_err) {
-        toast('⚠️ Invalid backup file');
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
 }
 
 async function doSignup() {
