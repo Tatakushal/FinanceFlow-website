@@ -15,6 +15,7 @@
     <div class="fw" style="margin-bottom:10px;"><label class="flbl">Password</label><input class="finput" type="password" id="pass" placeholder="••••••••" autocomplete="current-password"></div>
     <div style="text-align:right;margin-bottom:24px;"><a href="#" style="font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;" onclick="toast('Reset link sent to your email!')">Forgot password?</a></div>
     <button class="btn btn-p btn-full" onclick="doSignIn()">Sign In →</button>
+    <button class="btn btn-s btn-full" style="margin-top:12px;" onclick="restoreBackup()">Restore Backup (.json)</button>
     <div class="divider"><div class="div-line"></div><span class="div-txt">or continue with</span><div class="div-line"></div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <button class="btn-social" onclick="socialLogin('Apple')">🍎 Apple</button>
@@ -53,8 +54,7 @@ async function doSignIn() {
   if (!p) { toast('⚠️ Enter your password'); return; }
 
   if (!FF.checkAccount(e)) {
-    toast('No account found. Create one first.');
-    setTimeout(() => location.href = 'signup.html?email=' + encodeURIComponent(e), 900);
+    toast('Account not found on this device. Restore a backup or sign up.');
     return;
   }
 
@@ -72,6 +72,67 @@ async function doSignIn() {
   toast('✅ Welcome back, ' + name + '!');
   setTimeout(() => location.href = 'dashboard.html', 700);
 }
+function restoreBackup() {
+  const pass = document.getElementById('pass').value;
+  if (!pass || pass.length < 6) {
+    toast('⚠️ Enter a password (min 6) to restore');
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (rev) => {
+      try {
+        const parsed = JSON.parse(String(rev.target?.result || ''));
+        const safe = FF.ensureDataShape(parsed);
+        const backupEmail = String(safe?.email || '').trim();
+        const typedEmail = String(document.getElementById('email').value || '').trim();
+
+        const email = (backupEmail || typedEmail).toLowerCase();
+        if (!email || !email.includes('@')) {
+          toast('⚠️ Backup is missing a valid email');
+          return;
+        }
+
+        if (backupEmail && typedEmail && backupEmail.toLowerCase() !== typedEmail.toLowerCase()) {
+          document.getElementById('email').value = backupEmail;
+          toast('ℹ️ Backup email loaded into the form');
+        }
+
+        if (FF.checkAccount(email)) {
+          toast('⚠️ Account already exists on this device. Sign in instead.');
+          return;
+        }
+
+        // Store backup under the per-email key BEFORE login.
+        safe.email = backupEmail || typedEmail || safe.email || '';
+        localStorage.setItem(`ff_data_${email}`, JSON.stringify(safe));
+        await FF.setPassword(email, pass);
+
+        const derived = (() => {
+          const n = (email.split('@')[0] || '').trim();
+          return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'User';
+        })();
+        const name = String(safe?.name || '').trim() || derived;
+
+        FF.login(name, email);
+        toast('✅ Backup restored!');
+        setTimeout(() => location.href = 'dashboard.html', 700);
+      } catch (_err) {
+        toast('⚠️ Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
 function socialLogin(p) {
   const name = 'Demo User';
   FF.login(name, 'demo@financeflow.app');
