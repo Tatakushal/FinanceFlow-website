@@ -1,11 +1,11 @@
 # ⚡ Finance Flow — Full Web Application & Marketing Site
 
-A premium, AI-powered personal finance application and matching marketing website. This project is production-ready, featuring a 2-step simplified signup, private user data isolation, and a serverless AI advisor.
+A premium, AI-powered personal finance application and matching marketing website. This project is production-ready, featuring simple email/password signup (no OTP), private user data isolation, and a serverless AI advisor.
 
 ## 🚀 Key Features
 
 - **Marketing Suite**: Comprehensive landing page, features, pricing, and blog.
-- **2-Step Fast Signup**: Streamlined onboarding (Basic Details → OTP Verification).
+- **Simple Signup**: Email + password signup (no OTP).
 - **FlowAI Advisor**: A private financial agent that analyzes your spending and gives personalized advice.
 - **Data Isolation**: Every user account has its own private database (localStorage) — no mixed records.
 - **Cloud Sync (Optional)**: Sync the same account across phone + laptop (Firebase).
@@ -22,7 +22,7 @@ financeflow-final/
 ├── app/                    ← Full Web Application
 │   ├── dashboard.html      ← Financial Overview
 │   ├── ai-chat.html        ← FlowAI Advisor Interface
-│   ├── signup.html         ← 2-Step Simplified Signup
+│   ├── signup.html         ← Signup (Email/Password)
 │   └── ... (20+ pages)
 ├── api/
 │   └── flowai.js           ← Vercel Serverless Function
@@ -103,6 +103,6 @@ If Firebase env vars are not set, Finance Flow runs in local-only mode (no cloud
 ## 📝 Notes for Developers
 - To change brand colors, update `--primary` and `--accent` in `css/app.css` and `css/global.css`.
 - The AI endpoint requires the `OPENAI_API_KEY` to be set in the deployment environment.
-- The signup flow is purely frontend-simulated (OTP) for maximum privacy and zero database requirement.
+- Signup is email/password (local-only by default); Cloud Sync uses Firebase Authentication (optional).
 
 

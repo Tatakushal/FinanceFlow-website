@@ -14,11 +14,9 @@
 
 <div class="auth-wrap" style="align-items:flex-start;padding-top:48px;">
   <div class="auth-card" style="max-width:760px;">
-    <div class="step-dots"><div class="sdot on" id="d1"></div><div class="sdot" id="d2"></div></div>
-
     <div id="s1">
       <div class="auth-title">Create your account</div>
-      <div class="auth-sub">Step 1 of 2: Basic details</div>
+      <div class="auth-sub">One-step signup (no OTP)</div>
       <div class="form-row">
         <div class="fw"><label class="flbl">Full Name</label><input class="finput" id="sname" placeholder="Rahul Sharma" autocomplete="name"></div>
         <div class="fw"><label class="flbl">Email Address</label><input class="finput" type="email" id="semail" placeholder="you@example.com" autocomplete="email"></div>
@@ -31,29 +29,13 @@
         <div class="fw"><label class="flbl">Confirm Password</label><input class="finput" type="password" id="spass2" placeholder="Repeat password" autocomplete="new-password"></div>
         <div class="fw"></div>
       </div>
-      <button class="btn btn-p btn-full" onclick="goStep2()">Continue - Step 2 of 2</button>
+      <button class="btn btn-p btn-full" onclick="doSignup()">Create Account &#8594;</button>
       <button class="btn btn-s btn-full" style="margin-top:12px;" onclick="restoreBackup()">Restore Backup (.json)</button>
       <div class="divider"><div class="div-line"></div><span class="div-txt">or sign up with</span><div class="div-line"></div></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <button class="btn-social" onclick="socialSignup('Apple')">&#127822; Apple</button>
         <button class="btn-social" onclick="socialSignup('Google')">&#128309; Google</button>
       </div>
-    </div>
-
-    <div id="s2" style="display:none;text-align:center;">
-      <div style="font-size:56px;margin-bottom:16px;">&#128241;</div>
-      <div class="auth-title">Verify your number</div>
-      <div style="font-size:15px;color:var(--text-muted);margin-bottom:8px;">We sent a 4-digit code to</div>
-      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:28px;" id="otp-ph">+91 XXXXX XXXXX</div>
-      <div class="otp-row">
-        <input class="otp-in" maxlength="1" id="o1" oninput="onOtp(this,'o2')">
-        <input class="otp-in" maxlength="1" id="o2" oninput="onOtp(this,'o3')">
-        <input class="otp-in" maxlength="1" id="o3" oninput="onOtp(this,'o4')">
-        <input class="otp-in" maxlength="1" id="o4">
-      </div>
-      <button class="btn btn-p btn-full" onclick="doSignup()" style="margin-bottom:14px;">Verify & Create Account</button>
-      <div style="font-size:14px;color:var(--text-muted);">Didn't receive it? <span style="color:var(--accent);cursor:pointer;font-weight:700;" onclick="toast('New code sent!')">Resend code</span></div>
-      <button onclick="showStep(1)" style="margin-top:18px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;font-family:var(--fb);">&#8592; Go back</button>
     </div>
 
   </div>
@@ -80,13 +62,6 @@ if (decodedEmail) {
   }
 } else if (FF.isLoggedIn()) {
   location.href = 'dashboard.html';
-}
-
-function showStep(step) {
-  document.getElementById('s1').style.display = step === 1 ? 'block' : 'none';
-  document.getElementById('s2').style.display = step === 2 ? 'block' : 'none';
-  document.getElementById('d1').classList.toggle('on', step === 1);
-  document.getElementById('d2').classList.toggle('on', step === 2);
 }
 
 function restoreBackup() {
@@ -148,37 +123,17 @@ function restoreBackup() {
   input.click();
 }
 
-function goStep2() {
-  const n = document.getElementById('sname').value.trim();
-  const e = document.getElementById('semail').value.trim();
-  const p = document.getElementById('spass').value;
-  const p2 = document.getElementById('spass2').value;
-  if (!n) return toast('Enter your name.');
-  if (!e || !e.includes('@')) return toast('Enter a valid email.');
-  if (p.length < 6) return toast('Password needs at least 6 characters.');
-  if (p !== p2) return toast('Passwords do not match.');
-  if (FF.checkAccount(e)) {
-    toast('Account already exists. Please sign in.');
-    setTimeout(() => location.href = 'signin.html?email=' + encodeURIComponent(e), 900);
-    return;
-  }
-  const m = document.getElementById('smobile').value || '';
-  document.getElementById('otp-ph').textContent = m || e;
-  showStep(2);
-  document.getElementById('o1').focus();
-}
-
-function onOtp(el, next) { if (el.value.length === 1) document.getElementById(next)?.focus(); }
-
 async function doSignup() {
   const n = document.getElementById('sname').value.trim();
   const e = document.getElementById('semail').value.trim();
   const p = document.getElementById('spass').value;
+  const p2 = document.getElementById('spass2').value;
   const m = document.getElementById('smobile').value || '';
 
   if (!n) return toast('Enter your name.');
   if (!e || !e.includes('@')) return toast('Enter a valid email.');
   if (p.length < 6) return toast('Password needs at least 6 characters.');
+  if (p !== p2) return toast('Passwords do not match.');
 
   if (FF.checkAccount(e)) {
     toast('Account already exists. Please sign in.');
