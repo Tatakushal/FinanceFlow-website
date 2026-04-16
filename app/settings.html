@@ -229,7 +229,6 @@
           <div class="menu-row"><div class="menu-ico" style="background:var(--accent-dim);">📱</div><div class="menu-info"><div class="menu-lbl">Two-Factor Authentication</div><div class="menu-sub">SMS OTP on every sign-in</div></div><button class="tog off" onclick="tog(this,'twofa')"></button></div>
           <div class="menu-row" onclick="toast('Change password — coming in v2')" style="cursor:pointer;"><div class="menu-ico" style="background:var(--surface3);">🔑</div><div class="menu-info"><div class="menu-lbl">Change Password</div><div class="menu-sub">Last changed: never (new account)</div></div><span class="menu-chev">›</span></div>
         </div>
-        </div>
         <div class="menu-section" style="margin-bottom:14px;">
           <div class="menu-section-title">Session</div>
           <div class="menu-row"><div class="menu-ico" style="background:var(--surface3);">⏱️</div><div class="menu-info"><div class="menu-lbl">Auto Lock</div><div class="menu-sub">Lock after 5 minutes of inactivity</div></div><button class="tog on" onclick="tog(this,'auto_lock')"></button></div>
@@ -248,7 +247,18 @@
       <div style="max-width:680px;">
         <div class="card" style="margin-bottom:16px;">
           <div class="sec-ttl" style="margin-bottom:6px;">🛡️ Your Data is Private</div>
-          <p style="font-size:15px;color:var(--text-muted);line-height:1.75;margin-bottom:0;">Finance Flow stores all your financial data <strong style="color:#fff;">locally on your device</strong>. Nothing is sent to external servers without your consent. Your data belongs to you.</p>
+          <p style="font-size:15px;color:var(--text-muted);line-height:1.75;margin-bottom:0;">Finance Flow stores your data <strong style="color:#fff;">locally on your device</strong> by default. If Cloud Sync is enabled, your data is synced to your account so you can use the same account on phone and laptop.</p>
+        </div>
+        <div class="menu-section" style="margin-bottom:14px;">
+          <div class="menu-section-title">Cloud Sync</div>
+          <div class="menu-row">
+            <div class="menu-ico" style="background:var(--accent-dim);">☁️</div>
+            <div class="menu-info">
+              <div class="menu-lbl">Sync across devices</div>
+              <div class="menu-sub" id="cloud-status">Checking…</div>
+            </div>
+            <button class="tog on" id="cloud-toggle" onclick="toggleCloudSync(this)"></button>
+          </div>
         </div>
         <div class="menu-section" style="margin-bottom:14px;">
           <div class="menu-section-title">Storage & Usage</div>
@@ -297,6 +307,15 @@ document.getElementById('ep-income').value = d.income || '';
 const raw = localStorage.getItem('ff_data') || '';
 const kb = (new Blob([raw]).size / 1024).toFixed(1);
 document.getElementById('dp-size').textContent = kb + ' KB used in localStorage';
+
+// Cloud Sync toggle + status
+const cloudBtn = document.getElementById('cloud-toggle');
+if (cloudBtn) {
+  const on = d.cloud?.enabled !== false;
+  cloudBtn.classList.toggle('on', on);
+  cloudBtn.classList.toggle('off', !on);
+}
+updateCloudStatus();
 
 // Restore appearance chip states
 document.querySelectorAll('#currency-group .chip').forEach(c => {
@@ -440,6 +459,40 @@ function tog(b, key) {
     FF.save(d);
   }
   toast('Setting saved ✓');
+}
+
+function toggleCloudSync(btn) {
+  const on = !btn.classList.contains('on');
+  btn.classList.toggle('on', on);
+  btn.classList.toggle('off', !on);
+  if (!d.cloud || typeof d.cloud !== 'object') d.cloud = { enabled: true };
+  d.cloud.enabled = on;
+  FF.save(d);
+  toast(on ? 'Cloud sync enabled ✓' : 'Cloud sync disabled ✓');
+  updateCloudStatus();
+}
+
+async function updateCloudStatus() {
+  const st = document.getElementById('cloud-status');
+  if (!st) return;
+
+  if (d.cloud && d.cloud.enabled === false) {
+    st.textContent = 'Off (local only)';
+    return;
+  }
+
+  try {
+    const ok = await FF.cloud?.init?.();
+    if (!ok || !FF.cloud?.enabled) {
+      st.textContent = 'Not configured (server)';
+      return;
+    }
+
+    const authed = FF.cloud?.auth?.currentUser;
+    st.textContent = authed?.email ? ('Connected as ' + authed.email) : 'Ready (sign in to sync)';
+  } catch (_err) {
+    st.textContent = 'Not configured (server)';
+  }
 }
 
 // ── SECURITY ACTIONS ──

@@ -2,6 +2,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "routes": [
+    { "src": "/api/config", "dest": "/api/config.js" },
     { "src": "/api/flowai", "dest": "/api/flowai.js" },
     { "src": "/features", "dest": "/pages/features.html" },
     { "src": "/pricing", "dest": "/pages/pricing.html" },

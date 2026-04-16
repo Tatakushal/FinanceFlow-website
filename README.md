@@ -8,6 +8,7 @@ A premium, AI-powered personal finance application and matching marketing websit
 - **2-Step Fast Signup**: Streamlined onboarding (Basic Details → OTP Verification).
 - **FlowAI Advisor**: A private financial agent that analyzes your spending and gives personalized advice.
 - **Data Isolation**: Every user account has its own private database (localStorage) — no mixed records.
+- **Cloud Sync (Optional)**: Sync the same account across phone + laptop (Firebase).
 - **Zero Bank Linking**: Log transactions manually or via AI for total privacy.
 - **Responsive Design**: Works perfectly on Desktop, Tablet, and Mobile.
 
@@ -43,6 +44,14 @@ Finance Flow is optimized for **Vercel** serverless deployment.
 3.  **Set Environment Variables**: In Vercel Project Settings, add:
     -   `OPENAI_API_KEY`: Your OpenAI Secret Key.
     -   `OPENAI_MODEL`: `gpt-4o-mini` (or your preferred model).
+
+    Optional (Cloud Sync):
+    -   `FIREBASE_API_KEY`
+    -   `FIREBASE_AUTH_DOMAIN`
+    -   `FIREBASE_PROJECT_ID`
+    -   `FIREBASE_APP_ID`
+    -   `FIREBASE_STORAGE_BUCKET` (optional)
+    -   `FIREBASE_MESSAGING_SENDER_ID` (optional)
 4.  **Deploy**: Hit deploy and your app is live! 🚀
 
 ---
@@ -54,6 +63,30 @@ We use user-specific keys (`ff_data_{email}`) for all local storage. This ensure
 
 ### Serverless AI
 The AI backend runs on serverless functions. Your API keys are **never** exposed to the browser. All communication is encrypted and rate-limited for safety.
+
+---
+
+## ☁️ Cloud Sync (Firebase)
+Cloud Sync is optional. If configured, your account data is synced so the same email/password works across devices.
+
+Setup (Firebase Console):
+1. Create a Firebase project.
+2. Enable **Authentication → Email/Password**.
+3. Create a **Firestore Database**.
+4. Set Firestore rules to only allow the signed-in user to read/write their own document:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
+If Firebase env vars are not set, Finance Flow runs in local-only mode (no cloud sync).
 
 ---
 

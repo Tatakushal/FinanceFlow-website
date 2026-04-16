@@ -53,8 +53,55 @@ async function doSignIn() {
   if (!e) { toast('⚠️ Enter your email'); return; }
   if (!p) { toast('⚠️ Enter your password'); return; }
 
+  const derived = (() => {
+    const n = e.split('@')[0] || '';
+    return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'User';
+  })();
+
+  // Cloud Sync (Firebase) — if configured, sign in from cloud and sync data.
+  const cloudReady = await FF.cloud?.init?.().catch(() => false);
+  if (cloudReady) {
+    try {
+      const out = await FF.cloud.signIn(e, p);
+      toast('✅ Welcome back, ' + (out?.name || derived) + '!');
+      setTimeout(() => location.href = 'dashboard.html', 700);
+      return;
+    } catch (err) {
+      const code = String(err?.code || err?.message || '').toLowerCase();
+      const localExists = FF.checkAccount(e);
+
+      // If this email exists locally but not yet in cloud, migrate it automatically.
+      if (localExists && code.includes('user-not-found')) {
+        const storedName = FF.getAccountNameByEmail(e);
+        const name = storedName || derived;
+        const local = FF.getAccountDataByEmail(e) || FF.freshData(name, e, 0);
+        try {
+          await FF.cloud.signUp(name, e, p, local);
+          toast('✅ Cloud sync enabled for ' + name + '!');
+          setTimeout(() => location.href = 'dashboard.html', 700);
+          return;
+        } catch (_err2) {
+          // fall back to local below
+        }
+      }
+
+      if (code.includes('wrong-password') || code.includes('invalid-password') || code.includes('invalid-login-credentials') || code.includes('invalid-credential')) {
+        toast('Incorrect password');
+        return;
+      }
+      if (code.includes('user-not-found')) {
+        toast('No account found. Create one first.');
+        setTimeout(() => location.href = 'signup.html?email=' + encodeURIComponent(e), 900);
+        return;
+      }
+      // Any other cloud failure falls back to local.
+    }
+  }
+
+  // Local-only fallback
   if (!FF.checkAccount(e)) {
-    toast('Account not found on this device. Restore a backup or sign up.');
+    toast('No account found. Create one first.');
+    setTimeout(() => location.href = 'signup.html?email=' + encodeURIComponent(e), 900);
     return;
   }
 
@@ -62,10 +109,6 @@ async function doSignIn() {
   if (!ok) { toast('Incorrect password'); return; }
 
   const storedName = FF.getAccountNameByEmail(e);
-  const derived = (() => {
-    const n = e.split('@')[0] || '';
-    return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'User';
-  })();
   const name = storedName || derived;
 
   FF.login(name, e);

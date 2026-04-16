@@ -185,7 +185,32 @@ async function doSignup() {
     setTimeout(() => location.href = 'signin.html?email=' + encodeURIComponent(e), 900);
     return;
   }
-  
+
+  // Cloud Sync (Firebase) — if configured, create the account in the cloud first.
+  const cloudReady = await FF.cloud?.init?.().catch(() => false);
+  if (cloudReady) {
+    try {
+      const candidate = FF.freshData(n, e, 0);
+      if (m) candidate.mobile = m;
+      await FF.cloud.signUp(n, e, p, candidate);
+
+      // Store password hash locally (client-side) for offline fallback.
+      await FF.setPassword(e, p);
+
+      toast('Welcome to Finance Flow, ' + n + '!');
+      setTimeout(() => location.href = 'dashboard.html', 800);
+      return;
+    } catch (err) {
+      const code = String(err?.code || err?.message || '').toLowerCase();
+      if (code.includes('email-already-in-use')) {
+        toast('Account already exists. Please sign in.');
+        setTimeout(() => location.href = 'signin.html?email=' + encodeURIComponent(e), 900);
+        return;
+      }
+      // If cloud signup fails for any reason, fall back to local-only.
+    }
+  }
+
   try {
     FF.signup(n, e, 0);
   } catch (err) {

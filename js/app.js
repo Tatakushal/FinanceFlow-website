@@ -23,6 +23,7 @@ const FF = {
       notifications: {budget_exceeded:true,pct80:true,income_received:true,large_expense:true,recurring_due:true,daily_tip:true,weekly_summary:false,monthly_report:true},
       security: {biometric:true,twofa:false,auto_lock:true,screenshot:false},
       appearance: {theme:'dark',accent:'#00E5A0',currency:'\u20B9 INR',language:'English'},
+      cloud: { enabled: true },
     };
   },
 
@@ -56,6 +57,13 @@ const FF = {
     if (d.appearance.language && _lm[d.appearance.language]) {
       d.appearance.language = _lm[d.appearance.language];
     }
+
+    if (!d.cloud || typeof d.cloud !== 'object') {
+      d.cloud = { enabled: true };
+    }
+    if (typeof d.cloud.enabled !== 'boolean') {
+      d.cloud.enabled = true;
+    }
     return d;
   },
 
@@ -87,6 +95,7 @@ const FF = {
     if (!safe) return;
     const key = this.getDataKey();
     localStorage.setItem(key, JSON.stringify(safe));
+    try { this.cloud?.onLocalSave?.(safe); } catch (_err) {}
   },
 
   isLoggedIn() { return !!this.getUser(); },
@@ -190,6 +199,7 @@ const FF = {
 
   logout() {
     localStorage.removeItem('ff_user');
+    try { this.cloud?.signOut?.(); } catch (_err) {}
   },
 
   checkAccount(email) {
@@ -488,3 +498,273 @@ FF.initializeAppearance = function() {
     }
   }
 };
+
+// ── CLOUD SYNC (Firebase) ──
+FF.cloud = (() => {
+  const FIREBASE_VERSION = "10.12.5";
+
+  const cloud = {
+    enabled: false,
+    auth: null,
+    db: null,
+
+    _ready: null,
+    _config: null,
+    _configPromise: null,
+    _scriptLoads: Object.create(null),
+    _pushTimer: null,
+    _applyingRemote: false,
+
+    _cloudTsKey(email) {
+      const e = String(email || "").trim().toLowerCase();
+      return e ? `ff_cloud_ts_${e}` : "ff_cloud_ts";
+    },
+
+    async getConfig() {
+      if (this._configPromise) return this._configPromise;
+      this._configPromise = fetch("/api/config", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+        .then((cfg) => {
+          this._config = cfg;
+          return cfg;
+        });
+      return this._configPromise;
+    },
+
+    _loadScriptOnce(src) {
+      if (this._scriptLoads[src]) return this._scriptLoads[src];
+      this._scriptLoads[src] = new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src=\"${src}\"]`);
+        if (existing) return resolve();
+
+        const s = document.createElement("script");
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(s);
+      });
+      return this._scriptLoads[src];
+    },
+
+    async init() {
+      if (this._ready) return this._ready;
+
+      this._ready = (async () => {
+        const cfg = await this.getConfig();
+        const fb = cfg?.firebase;
+        if (!cfg?.cloudSync?.enabled || !fb?.apiKey || !fb?.authDomain || !fb?.projectId || !fb?.appId) {
+          return false;
+        }
+
+        await this._loadScriptOnce(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app-compat.js`);
+        await this._loadScriptOnce(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth-compat.js`);
+        await this._loadScriptOnce(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore-compat.js`);
+
+        if (!globalThis.firebase) return false;
+
+        // Initialize once
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(fb);
+        }
+
+        this.auth = firebase.auth();
+        this.db = firebase.firestore();
+        this.enabled = true;
+
+        // Pull latest on auth changes (best-effort)
+        try {
+          this.auth.onAuthStateChanged((u) => {
+            if (!u) return;
+            this.pullLatestIfNewer().catch(() => {});
+          });
+        } catch (_err) {}
+
+        // If already authed, try immediately
+        this.pullLatestIfNewer().catch(() => {});
+
+        return true;
+      })();
+
+      return this._ready;
+    },
+
+    _getAuthedUser() {
+      return this.auth?.currentUser || null;
+    },
+
+    _getLocalUser() {
+      const u = FF.getUser();
+      if (!u?.email) return null;
+      return { name: String(u.name || ""), email: String(u.email || "") };
+    },
+
+    _emailsMatch(a, b) {
+      return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+    },
+
+    async signOut() {
+      try {
+        if (await this.init()) {
+          await this.auth?.signOut?.();
+        }
+      } catch (_err) {}
+    },
+
+    async _docRef() {
+      const u = this._getAuthedUser();
+      if (!u || !this.db) return null;
+      return this.db.collection("users").doc(u.uid);
+    },
+
+    async pull() {
+      if (!(await this.init())) throw new Error("CLOUD_NOT_CONFIGURED");
+      const ref = await this._docRef();
+      if (!ref) throw new Error("CLOUD_NOT_AUTHED");
+      const snap = await ref.get();
+      if (!snap.exists) return null;
+      return snap.data() || null;
+    },
+
+    _deriveNameFromEmail(email) {
+      const e = String(email || "");
+      const raw = (e.split("@")[0] || "").trim();
+      return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "User";
+    },
+
+    applyRemote(remote) {
+      if (!remote || typeof remote !== "object") return false;
+      const data = FF.ensureDataShape(remote.data || remote) || null;
+      if (!data) return false;
+
+      const email = String(remote?.profile?.email || data.email || "").trim();
+      if (!email) return false;
+
+      const name =
+        String(remote?.profile?.name || data.name || "").trim() || this._deriveNameFromEmail(email);
+
+      const updatedAtMs = Number(remote?.updatedAtMs || 0);
+
+      this._applyingRemote = true;
+      try {
+        FF.login(name, email);
+        data.name = name;
+        data.email = email;
+        FF.save(data);
+        if (updatedAtMs) {
+          localStorage.setItem(this._cloudTsKey(email), String(updatedAtMs));
+        }
+        return true;
+      } finally {
+        this._applyingRemote = false;
+      }
+    },
+
+    async pullLatestIfNewer() {
+      if (!(await this.init())) return false;
+
+      const authed = this._getAuthedUser();
+      const local = this._getLocalUser();
+      if (!authed || !local) return false;
+
+      if (authed.email && !this._emailsMatch(authed.email, local.email)) return false;
+      if (!FF.data?.cloud?.enabled) return false;
+
+      const remote = await this.pull().catch(() => null);
+      if (!remote?.data) return false;
+
+      const remoteTs = Number(remote.updatedAtMs || 0);
+      const localTs = Number(localStorage.getItem(this._cloudTsKey(local.email)) || 0);
+      if (remoteTs && remoteTs <= localTs) return false;
+
+      return this.applyRemote(remote);
+    },
+
+    async push(data) {
+      if (!(await this.init())) throw new Error("CLOUD_NOT_CONFIGURED");
+      const authed = this._getAuthedUser();
+      const local = this._getLocalUser();
+      if (!authed || !local) throw new Error("CLOUD_NOT_AUTHED");
+      if (authed.email && !this._emailsMatch(authed.email, local.email)) {
+        throw new Error("CLOUD_EMAIL_MISMATCH");
+      }
+
+      const safe = FF.ensureDataShape(data) || null;
+      if (!safe) return false;
+
+      const updatedAtMs = Date.now();
+      const payload = {
+        profile: { name: local.name || safe.name || "", email: local.email || safe.email || "" },
+        data: safe,
+        updatedAtMs
+      };
+
+      const ref = await this._docRef();
+      if (!ref) throw new Error("CLOUD_NOT_AUTHED");
+
+      await ref.set(payload, { merge: true });
+      localStorage.setItem(this._cloudTsKey(local.email), String(updatedAtMs));
+      return true;
+    },
+
+    onLocalSave(safe) {
+      if (this._applyingRemote) return;
+      if (!FF.data?.cloud?.enabled) return;
+      if (!this.enabled) return;
+      if (!this._getAuthedUser()) return;
+
+      clearTimeout(this._pushTimer);
+      this._pushTimer = setTimeout(() => {
+        this.push(safe).catch(() => {});
+      }, 900);
+    },
+
+    async signUp(name, email, password, localData) {
+      if (!(await this.init())) throw new Error("CLOUD_NOT_CONFIGURED");
+
+      const cred = await this.auth.createUserWithEmailAndPassword(email, password);
+      const u = cred?.user;
+      if (!u) throw new Error("CLOUD_SIGNUP_FAILED");
+
+      const data = localData || FF.getAccountDataByEmail(email) || FF.freshData(name, email, 0);
+      data.name = String(name || data.name || "").trim();
+      data.email = String(email || data.email || "").trim();
+
+      // Ensure local user exists and push to cloud
+      FF.login(data.name || this._deriveNameFromEmail(email), email);
+      FF.save(data);
+
+      await this.push(data);
+      return { ok: true, name: data.name, email: data.email };
+    },
+
+    async signIn(email, password) {
+      if (!(await this.init())) throw new Error("CLOUD_NOT_CONFIGURED");
+
+      const cred = await this.auth.signInWithEmailAndPassword(email, password);
+      const u = cred?.user;
+      if (!u) throw new Error("CLOUD_SIGNIN_FAILED");
+
+      const remote = await this.pull().catch(() => null);
+      if (remote?.data) {
+        this.applyRemote(remote);
+        const name =
+          String(remote?.profile?.name || remote?.data?.name || "").trim() || this._deriveNameFromEmail(email);
+        return { ok: true, name, email };
+      }
+
+      // No remote doc yet: seed from local (or fresh) and push.
+      const localData = FF.getAccountDataByEmail(email) || FF.freshData(this._deriveNameFromEmail(email), email, 0);
+      FF.login(String(localData.name || "").trim() || this._deriveNameFromEmail(email), email);
+      FF.save(localData);
+      await this.push(localData);
+      return { ok: true, name: localData.name, email };
+    }
+  };
+
+  // Warm up (best-effort)
+  try { setTimeout(() => cloud.init().catch(() => {}), 0); } catch (_err) {}
+
+  return cloud;
+})();
