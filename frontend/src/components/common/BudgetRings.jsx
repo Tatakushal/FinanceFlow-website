@@ -82,7 +82,7 @@ export default function BudgetRings({ max = 6, manage = false }) {
     let updatedBudgets;
     if (editingCat) {
       updatedBudgets = allBudgets.map(b => (b.cat === editingCat
-        ? { ...b, cat: editingCat, ico: icon, lim, clr: color }
+        ? { ...b, cat: b.cat, ico: icon, lim, clr: color }
         : b));
       showToast('Budget updated');
     } else {
@@ -159,8 +159,8 @@ export default function BudgetRings({ max = 6, manage = false }) {
           <div className="form-row">
             <div className="fw">
               <label className="flbl">Category</label>
-              <input className="finput" value={form.cat} disabled={!!editingCat} onChange={e => setForm(f => ({ ...f, cat: e.target.value }))} placeholder="e.g. Food" />
-              {editingCat ? <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>Category is locked for existing budgets to keep spend tracking accurate.</div> : null}
+              <input className="finput" value={form.cat} disabled={!!editingCat} aria-describedby={editingCat ? 'budget-cat-lock-help' : undefined} onChange={e => setForm(f => ({ ...f, cat: e.target.value }))} placeholder="e.g. Food" />
+              {editingCat ? <div id="budget-cat-lock-help" style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>Category is locked for existing budgets to keep spend tracking accurate.</div> : null}
             </div>
             <div className="fw">
               <label className="flbl">Icon</label>
