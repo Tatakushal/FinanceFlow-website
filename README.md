@@ -33,29 +33,6 @@ financeflow-final/
 └── vercel.json             ← Production Deployment Config
 ```
 
----
-
-## 🛠️ Deploy to Vercel (Recommended)
-
-Finance Flow is optimized for **Vercel** serverless deployment.
-
-1.  **Push to GitHub**: Upload this folder to a GitHub repository.
-2.  **Import to Vercel**: Connect your repo to Vercel.
-3.  **Set Environment Variables**: In Vercel Project Settings, add:
-    -   `OPENAI_API_KEY`: Your OpenAI Secret Key.
-    -   `OPENAI_MODEL`: `gpt-4o-mini` (or your preferred model).
-
-    Optional (Cloud Sync):
-    -   `FIREBASE_API_KEY`
-    -   `FIREBASE_AUTH_DOMAIN`
-    -   `FIREBASE_PROJECT_ID`
-    -   `FIREBASE_APP_ID`
-    -   `FIREBASE_STORAGE_BUCKET` (optional)
-    -   `FIREBASE_MESSAGING_SENDER_ID` (optional)
-4.  **Deploy**: Hit deploy and your app is live! 🚀
-
----
-
 ## 🔒 Security & Privacy
 
 ### User Data Isolation
