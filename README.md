@@ -23,6 +23,36 @@ npm install
 npm run dev
 ```
 
+## 🔒 Security & Privacy
+
+### User Data Isolation
+We use user-specific keys (`ff_data_{email}`) for all local storage. This ensures that even if multiple users use the same browser, their financial records remains strictly private and isolated.
+
+### Serverless AI
+The AI backend runs on serverless functions. Your API keys are **never** exposed to the browser. All communication is encrypted and rate-limited for safety.
+
+---
+
+## ☁️ Cloud Sync (Firebase)
+Cloud Sync is optional. If configured, your account data is synced so the same email/password works across devices.
+
+Setup (Firebase Console):
+1. Create a Firebase project.
+2. Enable **Authentication → Email/Password**.
+3. Create a **Firestore Database**.
+4. Set Firestore rules to only allow the signed-in user to read/write their own document:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
 Production build:
 
 ```bash
