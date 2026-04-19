@@ -1,16 +1,10 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "buildCommand": "cd frontend && npm install && npm run build",
+  "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
-  "routes": [
-    { "src": "/api/config", "dest": "/api/config.js" },
-    { "src": "/api/flowai", "dest": "/api/flowai.js" },
-    {
-      "src": "/(.*\\.(js|css|png|svg|ico|jpg|jpeg|gif|webp|woff|woff2|ttf|eot|json))",
-      "dest": "/frontend/dist/$1"
-    },
-    { "src": "/(.*)", "dest": "/frontend/dist/index.html" }
+  "rewrites": [
+    { "source": "/:path*", "destination": "/index.html" }
   ],
   "headers": [
     {
