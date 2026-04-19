@@ -12,7 +12,33 @@ const firebaseConfig = {
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+const requiredKeys = [
+  'apiKey',
+  'authDomain',
+  'projectId',
+  'storageBucket',
+  'messagingSenderId',
+  'appId',
+];
 
-export const auth = getAuth(app);
-export const db   = getFirestore(app);
+const hasRequiredConfig = requiredKeys.every((key) => {
+  const value = firebaseConfig[key];
+  return typeof value === 'string' && value.trim().length > 0;
+});
+
+let auth = null;
+let db = null;
+
+if (hasRequiredConfig) {
+  try {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (err) {
+    console.error('[Firebase] Initialization failed. Running without cloud auth/sync.', err);
+  }
+} else {
+  console.warn('[Firebase] Missing config. Running without cloud auth/sync.');
+}
+
+export { auth, db };
