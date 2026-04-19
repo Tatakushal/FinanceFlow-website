@@ -82,7 +82,7 @@ export default function BudgetRings({ max = 6, manage = false }) {
     let updatedBudgets;
     if (editingCat) {
       updatedBudgets = allBudgets.map(b => (b.cat === editingCat
-        ? { ...b, cat: b.cat, ico: icon, lim, clr: color }
+        ? { ...b, ico: icon, lim, clr: color }
         : b));
       showToast('Budget updated');
     } else {
@@ -158,23 +158,23 @@ export default function BudgetRings({ max = 6, manage = false }) {
           </div>
           <div className="form-row">
             <div className="fw">
-              <label className="flbl">Category</label>
-              <input className="finput" value={form.cat} disabled={!!editingCat} aria-describedby={editingCat ? 'budget-cat-lock-help' : undefined} onChange={e => setForm(f => ({ ...f, cat: e.target.value }))} placeholder="e.g. Food" />
+              <label className="flbl" htmlFor="budget-ring-category">Category</label>
+              <input id="budget-ring-category" className="finput" value={form.cat} disabled={!!editingCat} aria-describedby={editingCat ? 'budget-cat-lock-help' : undefined} onChange={e => setForm(f => ({ ...f, cat: e.target.value }))} placeholder="e.g. Food" />
               {editingCat ? <div id="budget-cat-lock-help" style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>Category is locked for existing budgets to keep spend tracking accurate.</div> : null}
             </div>
             <div className="fw">
-              <label className="flbl">Icon</label>
-              <input className="finput" value={form.ico} onChange={e => setForm(f => ({ ...f, ico: e.target.value }))} placeholder="🍕" />
+              <label className="flbl" htmlFor="budget-ring-icon">Icon</label>
+              <input id="budget-ring-icon" className="finput" value={form.ico} onChange={e => setForm(f => ({ ...f, ico: e.target.value }))} placeholder="🍕" />
             </div>
           </div>
           <div className="form-row">
             <div className="fw">
-              <label className="flbl">Limit</label>
-              <input className="finput" type="number" min="1" value={form.lim} onChange={e => setForm(f => ({ ...f, lim: e.target.value }))} placeholder="0" />
+              <label className="flbl" htmlFor="budget-ring-limit">Limit</label>
+              <input id="budget-ring-limit" className="finput" type="number" min="1" value={form.lim} onChange={e => setForm(f => ({ ...f, lim: e.target.value }))} placeholder="0" />
             </div>
             <div className="fw">
-              <label className="flbl">Color</label>
-              <input className="finput" type="color" value={form.clr} onChange={e => setForm(f => ({ ...f, clr: e.target.value }))} />
+              <label className="flbl" htmlFor="budget-ring-color">Color</label>
+              <input id="budget-ring-color" className="finput" type="color" value={form.clr} onChange={e => setForm(f => ({ ...f, clr: e.target.value }))} />
             </div>
           </div>
           <div className="budget-rings-form-actions">
