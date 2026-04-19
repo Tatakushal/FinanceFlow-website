@@ -712,7 +712,7 @@ select.finput option{background:#111C2D;color:#fff;}
   .btn{padding:14px 22px;font-size:15px;}
 
   /* Toast */
-  .toast{width:calc(100vw - 24px);max-width:none;transform:none;white-space:normal;text-align:center;border-radius:16px;padding:13px 18px;}
+  .toast{width:calc(100vw - 24px);max-width:min(460px,calc(100vw - 24px));transform:none;white-space:normal;text-align:center;border-radius:16px;padding:13px 18px;}
   .toast.show{transform:none;}
 }
 
