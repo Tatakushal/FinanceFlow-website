@@ -40,7 +40,7 @@ export default function AddTransaction() {
     if (!v || v <= 0) { showToast('⚠️ Enter an amount first'); return; }
     if (!cat) { showToast('⚠️ Select a category'); return; }
     const txName = desc.trim() || cat.n;
-    const created = doAddTx({
+    const addedTx = doAddTx({
       type,
       amt: v,
       cat: cat.n,
@@ -50,7 +50,7 @@ export default function AddTransaction() {
       pay: type === 'expense' ? pay : 'Bank',
       clr: type === 'expense' ? '#FF6B35' : '#00E5A0',
     });
-    const xpLine = created?.xp ? ` • +${created.xp} XP` : '';
+    const xpLine = addedTx?.xp ? ` • +${addedTx.xp} XP` : '';
     showToast(`✅ ${fmt(v)} ${type === 'expense' ? 'expense' : 'income'} added to ${cat.n}${xpLine}`);
     setTimeout(() => navigate('/app/dashboard'), 700);
   }

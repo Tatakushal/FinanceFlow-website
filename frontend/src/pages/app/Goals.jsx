@@ -10,6 +10,7 @@ export default function Goals() {
   const [form, setForm] = useState({ name:'', emoji:'🎯', target:'', saved:'0' });
 
   const goals = data?.goals || [];
+  const calculateSavingsXp = (amount) => Math.max(8, Math.min(40, Math.round(amount / 200)));
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -40,7 +41,7 @@ export default function Goals() {
     save(updated);
     const refreshedGoal = updated.goals.find(g => g.id === id);
     const isNowComplete = refreshedGoal && refreshedGoal.saved >= refreshedGoal.target;
-    let gained = doAwardXp(Math.max(8, Math.min(40, Math.round(amt / 200))), `Saved toward goal: ${goal.name}`);
+    let gained = doAwardXp(calculateSavingsXp(amt), `Saved toward goal: ${goal.name}`);
     if (!wasComplete && isNowComplete) {
       gained += doAwardXp(60, `Goal completed: ${goal.name}`);
     }

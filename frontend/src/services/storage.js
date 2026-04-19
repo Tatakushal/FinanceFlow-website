@@ -245,9 +245,7 @@ export function getTotals(email) {
 export function addTx(email, tx) {
   const d = getData(email);
   if (!d) return;
-  const dateLabel = tx?.date
-    ? new Date(tx.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const dateLabel = tx?.date ? formatDateLabel(tx.date) : formatDateLabel(new Date());
   const newTx = { ...tx, id: Date.now(), date: dateLabel };
   const awardedXp = calculateTransactionXP(d, newTx);
   if (awardedXp > 0) {
@@ -311,6 +309,10 @@ function calculateTransactionXP(data, tx) {
   }
 
   return Math.max(5, Math.round(base + volumeBonus + bonus));
+}
+
+function formatDateLabel(value) {
+  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function applyXp(data, amount, reason = 'Activity') {
