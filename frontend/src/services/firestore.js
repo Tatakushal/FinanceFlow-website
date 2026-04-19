@@ -7,7 +7,7 @@ import { ensureDataShape } from './storage';
  * Returns the shaped data object, or null if the document doesn't exist.
  */
 export async function loadUserData(uid) {
-  if (!uid) return null;
+  if (!uid || !db) return null;
   try {
     const snap = await getDoc(doc(db, 'users', uid));
     if (!snap.exists()) return null;
@@ -22,7 +22,7 @@ export async function loadUserData(uid) {
  * Persist user data document to Firestore (fire-and-forget safe).
  */
 export async function saveUserData(uid, data) {
-  if (!uid || !data) return;
+  if (!uid || !data || !db) return;
   try {
     const safe = ensureDataShape(data);
     if (safe) await setDoc(doc(db, 'users', uid), safe);
