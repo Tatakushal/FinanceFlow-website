@@ -47,7 +47,17 @@ Optional:
 
 - `OPENAI_MODEL`
 
+### If new code is not showing on Vercel
+
+1. Confirm Vercel project is connected to this repo and correct branch.
+2. In Vercel Project Settings, keep:
+   - Build Command: `cd frontend && npm ci && npm run build`
+   - Output Directory: `frontend/dist`
+3. Trigger a fresh deploy from the latest commit.
+4. Hard refresh browser cache (`Ctrl/Cmd + Shift + R`).
+
 ## Important behavior (smart login / account data)
 
 User auth/data in the current frontend is stored in browser `localStorage`.
-That means account data does **not** sync automatically between mobile and laptop unless cloud sync is added/configured.
+That means account data does **not** sync automatically between mobile and laptop by default.
+For cross-device same-account data, cloud sync must be implemented/configured (e.g., Firebase or backend user storage).
