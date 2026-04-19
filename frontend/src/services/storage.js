@@ -270,6 +270,19 @@ export function deleteTx(email, txId) {
     const b = d.budgets.find(b => b.cat === tx.cat);
     if (b) b.spent = Math.max(0, b.spent - tx.amt);
   }
+  if (tx && Number(tx.xp) > 0) {
+    const deduct = Math.floor(Number(tx.xp));
+    if (!d.gamification || typeof d.gamification !== 'object') d.gamification = { xp: 0, xpLog: [] };
+    if (!Array.isArray(d.gamification.xpLog)) d.gamification.xpLog = [];
+    d.gamification.xp = Math.max(0, Number(d.gamification.xp || 0) - deduct);
+    d.gamification.xpLog.unshift({
+      id: Date.now(),
+      amount: -deduct,
+      reason: `Transaction removed: ${tx.name || tx.cat || 'Entry'}`,
+      createdAt: new Date().toISOString(),
+    });
+    d.gamification.xpLog = d.gamification.xpLog.slice(0, 200);
+  }
   d.txs = d.txs.filter(t => t.id !== txId);
   saveData(email, d);
 }
