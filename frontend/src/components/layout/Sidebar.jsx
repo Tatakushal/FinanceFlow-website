@@ -5,12 +5,10 @@ import { useToast } from '../../contexts/ToastContext';
 const NAV = [
   { to: '/app/dashboard',      icon: '🏠', label: 'Home' },
   { to: '/app/transactions',   icon: '💳', label: 'Transactions' },
-  { to: '/app/add',            icon: '➕', label: 'Add Transaction' },
   { to: '/app/reports',        icon: '📊', label: 'Reports' },
   { to: '/app/goals',          icon: '🎯', label: 'Goals' },
   { to: '/app/wealth',         icon: '💎', label: 'Wealth' },
   { to: '/app/subscriptions',  icon: '🔁', label: 'Subscriptions' },
-  { to: '/app/health-score',   icon: '💯', label: 'Health Score' },
   { to: '/app/ai-chat',        icon: '✨', label: 'FlowAI' },
   { to: '/app/leaderboard',    icon: '🏆', label: 'Leaderboard' },
 ];

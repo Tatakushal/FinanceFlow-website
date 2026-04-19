@@ -6,6 +6,16 @@ export default function BudgetRings({ max = 6 }) {
 
   if (!budgets.length) return null;
 
+  const decodeIcon = (value) => {
+    if (typeof value !== 'string') return '';
+    return value.replace(/&#(x?[0-9a-fA-F]+);/g, (_, code) => {
+      const point = code.toLowerCase().startsWith('x')
+        ? Number.parseInt(code.slice(1), 16)
+        : Number.parseInt(code, 10);
+      return Number.isFinite(point) ? String.fromCodePoint(point) : _;
+    });
+  };
+
   return (
     <div className="rings-grid">
       {budgets.map(b => {
@@ -32,7 +42,7 @@ export default function BudgetRings({ max = 6 }) {
                 {Math.round(pct)}%
               </text>
             </svg>
-            <div style={{ fontSize: 16, marginBottom: 4 }}>{b.ico}</div>
+            <div style={{ fontSize: 16, marginBottom: 4 }}>{decodeIcon(b.ico)}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{b.cat}</div>
             <div style={{ fontSize: 11, color: over ? 'var(--warn)' : 'var(--text-dim)' }}>
               {fmt(b.spent)} / {fmt(b.lim)}
