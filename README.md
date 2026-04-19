@@ -26,7 +26,7 @@ npm run dev
 ## 🔒 Security & Privacy
 
 ### User Data Isolation
-We use user-specific keys (`ff_data_{email}`) for all local storage. This ensures that even if multiple users use the same browser, their financial records remains strictly private and isolated.
+We use user-specific keys (`ff_data_{email}`) for all local storage. This ensures that even if multiple users use the same browser, their financial records remain strictly private and isolated.
 
 ### Serverless AI
 The AI backend runs on serverless functions. Your API keys are **never** exposed to the browser. All communication is encrypted and rate-limited for safety.
