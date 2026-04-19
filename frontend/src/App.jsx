@@ -18,6 +18,7 @@ const Wealth         = lazy(() => import('./pages/app/Wealth'));
 const Subscriptions  = lazy(() => import('./pages/app/Subscriptions'));
 const HealthScore    = lazy(() => import('./pages/app/HealthScore'));
 const AIChat         = lazy(() => import('./pages/app/AIChat'));
+const Leaderboard    = lazy(() => import('./pages/app/Leaderboard'));
 const Settings       = lazy(() => import('./pages/app/Settings'));
 const Profile        = lazy(() => import('./pages/app/Profile'));
 
@@ -63,6 +64,7 @@ function AppRoutes() {
         <Route path="/app/subscriptions.html" element={<Navigate to="/app/subscriptions" replace />} />
         <Route path="/app/health-score.html" element={<Navigate to="/app/health-score" replace />} />
         <Route path="/app/ai-chat.html" element={<Navigate to="/app/ai-chat" replace />} />
+        <Route path="/app/leaderboard.html" element={<Navigate to="/app/leaderboard" replace />} />
         <Route path="/app/settings.html" element={<Navigate to="/app/settings" replace />} />
         <Route path="/app/profile.html" element={<Navigate to="/app/profile" replace />} />
 
@@ -75,6 +77,7 @@ function AppRoutes() {
         <Route path="/app/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
         <Route path="/app/health-score" element={<ProtectedRoute><HealthScore /></ProtectedRoute>} />
         <Route path="/app/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+        <Route path="/app/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
         <Route path="/app/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/app/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 

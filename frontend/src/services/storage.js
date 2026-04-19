@@ -4,7 +4,17 @@
  * All localStorage access is isolated per user: ff_data_<email>
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+
+const LEVEL_TITLES = [
+  'Finance Apprentice',
+  'Budget Builder',
+  'Savings Strategist',
+  'Cashflow Captain',
+  'Money Master',
+  'Wealth Architect',
+  'Legend Investor',
+];
 
 export const DEFAULT_BUDGETS = [
   { cat: 'Food',     ico: '🍕', spent: 0, lim: 6000, clr: '#FF6B35' },
@@ -40,6 +50,8 @@ export function freshData(name, email, income = 0) {
     security: { biometric: true, twofa: false, auto_lock: true, screenshot: false },
     appearance: { theme: 'dark', accent: '#00E5A0', currency: '₹ INR', language: 'English' },
     cloud: { enabled: true },
+    gamification: { xp: 0, xpLog: [] },
+    social: { friends: [], incomingRequests: [], outgoingRequests: [] },
   };
 }
 
@@ -69,6 +81,13 @@ export function ensureDataShape(d) {
     d.security = { biometric: true, twofa: false, auto_lock: true, screenshot: false };
   }
   if (!d.cloud || typeof d.cloud !== 'object') d.cloud = { enabled: true };
+  if (!d.gamification || typeof d.gamification !== 'object') d.gamification = { xp: 0, xpLog: [] };
+  if (!Number.isFinite(Number(d.gamification.xp)) || Number(d.gamification.xp) < 0) d.gamification.xp = 0;
+  if (!Array.isArray(d.gamification.xpLog)) d.gamification.xpLog = [];
+  if (!d.social || typeof d.social !== 'object') d.social = { friends: [], incomingRequests: [], outgoingRequests: [] };
+  if (!Array.isArray(d.social.friends)) d.social.friends = [];
+  if (!Array.isArray(d.social.incomingRequests)) d.social.incomingRequests = [];
+  if (!Array.isArray(d.social.outgoingRequests)) d.social.outgoingRequests = [];
   d._v = SCHEMA_VERSION;
   return d;
 }
@@ -226,7 +245,15 @@ export function getTotals(email) {
 export function addTx(email, tx) {
   const d = getData(email);
   if (!d) return;
-  const newTx = { ...tx, id: Date.now(), date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) };
+  const dateLabel = tx?.date
+    ? new Date(tx.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const newTx = { ...tx, id: Date.now(), date: dateLabel };
+  const awardedXp = calculateTransactionXP(d, newTx);
+  if (awardedXp > 0) {
+    newTx.xp = awardedXp;
+    applyXp(d, awardedXp, `Transaction: ${newTx.name || newTx.cat || 'Entry'}`);
+  }
   d.txs.unshift(newTx);
   if (newTx.type === 'expense') {
     const b = d.budgets.find(b => b.cat === newTx.cat);
@@ -264,4 +291,196 @@ export function fmtCurrency(n, currency = '₹ INR') {
   if (abs >= 100000) return sym + (abs / 100000).toFixed(1) + 'L';
   if (abs >= 1000) return sym + (abs / 1000).toFixed(1) + 'K';
   return sym + abs.toLocaleString('en-IN');
+}
+
+function calculateTransactionXP(data, tx) {
+  const amount = Number(tx?.amt) || 0;
+  const base = tx?.type === 'income' ? 14 : 10;
+  const volumeBonus = Math.min(20, Math.floor(amount / 1000) * 2);
+  let bonus = 0;
+
+  if (tx?.type === 'expense') {
+    const budget = (data?.budgets || []).find(b => b.cat === tx.cat);
+    if (budget && (Number(budget.spent) + amount) <= Number(budget.lim || 0)) bonus += 8;
+  }
+
+  if (tx?.type === 'income') {
+    const currentIncome = (data?.txs || []).filter(t => t.type === 'income').reduce((a, t) => a + (Number(t.amt) || 0), 0);
+    const currentSpent = (data?.txs || []).filter(t => t.type === 'expense').reduce((a, t) => a + (Number(t.amt) || 0), 0);
+    if ((currentIncome + amount - currentSpent) > 0) bonus += 6;
+  }
+
+  return Math.max(5, Math.round(base + volumeBonus + bonus));
+}
+
+function applyXp(data, amount, reason = 'Activity') {
+  const gain = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!gain) return 0;
+  const current = Number(data?.gamification?.xp || 0);
+  if (!data.gamification || typeof data.gamification !== 'object') data.gamification = { xp: 0, xpLog: [] };
+  if (!Array.isArray(data.gamification.xpLog)) data.gamification.xpLog = [];
+  data.gamification.xp = current + gain;
+  data.gamification.xpLog.unshift({
+    id: Date.now(),
+    amount: gain,
+    reason,
+    createdAt: new Date().toISOString(),
+  });
+  data.gamification.xpLog = data.gamification.xpLog.slice(0, 200);
+  return gain;
+}
+
+export function awardXp(email, amount, reason = 'Bonus') {
+  const d = getData(email);
+  if (!d) return 0;
+  const gained = applyXp(d, amount, reason);
+  saveData(email, d);
+  return gained;
+}
+
+export function getLevelInfo(xp = 0) {
+  let totalXp = Math.max(0, Math.floor(Number(xp) || 0));
+  let level = 1;
+  let threshold = 120;
+
+  while (totalXp >= threshold) {
+    totalXp -= threshold;
+    level += 1;
+    threshold = Math.round(threshold * 1.22);
+  }
+
+  const progressPct = Math.max(0, Math.min(100, (totalXp / threshold) * 100));
+  return {
+    level,
+    currentLevelXp: totalXp,
+    nextLevelXp: threshold,
+    xpToNextLevel: threshold - totalXp,
+    progressPct,
+  };
+}
+
+export function getLevelTitle(level = 1) {
+  const idx = Math.max(0, Math.min(LEVEL_TITLES.length - 1, Number(level) - 1));
+  return LEVEL_TITLES[idx];
+}
+
+export function getUserGamification(email) {
+  const d = getData(email);
+  if (!d) return { xp: 0, level: 1, title: LEVEL_TITLES[0], currentLevelXp: 0, nextLevelXp: 120, xpToNextLevel: 120, progressPct: 0 };
+  const xp = Number(d?.gamification?.xp || 0);
+  const levelInfo = getLevelInfo(xp);
+  return { xp, ...levelInfo, title: getLevelTitle(levelInfo.level) };
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function userLiteByEmail(email) {
+  const d = getAccountData(email);
+  if (!d) return null;
+  return { email: normalizeEmail(email), name: String(d?.name || '').trim() || normalizeEmail(email) };
+}
+
+export function sendFriendRequest(fromEmail, toEmailRaw) {
+  const from = normalizeEmail(fromEmail);
+  const to = normalizeEmail(toEmailRaw);
+  if (!from || !to) throw new Error('Both email addresses are required.');
+  if (from === to) throw new Error('You cannot send a friend request to yourself.');
+
+  const fromData = getData(from);
+  const toData = getAccountData(to);
+  if (!fromData || !toData) throw new Error('Account not found for that email.');
+
+  ensureDataShape(fromData);
+  ensureDataShape(toData);
+
+  if (fromData.social.friends.some(f => normalizeEmail(f.email) === to)) throw new Error('Already connected.');
+  if (fromData.social.outgoingRequests.some(f => normalizeEmail(f.email) === to)) throw new Error('Request already sent.');
+  if (fromData.social.incomingRequests.some(f => normalizeEmail(f.email) === to)) throw new Error('This user has already requested you.');
+
+  const fromLite = userLiteByEmail(from);
+  const toLite = userLiteByEmail(to);
+  if (!fromLite || !toLite) throw new Error('Unable to load account data.');
+
+  fromData.social.outgoingRequests.unshift(toLite);
+  toData.social.incomingRequests.unshift(fromLite);
+
+  saveData(from, fromData);
+  saveData(to, toData);
+}
+
+export function acceptFriendRequest(userEmail, fromEmailRaw) {
+  const user = normalizeEmail(userEmail);
+  const from = normalizeEmail(fromEmailRaw);
+  const userData = getData(user);
+  const fromData = getAccountData(from);
+  if (!userData || !fromData) throw new Error('Account not found.');
+
+  ensureDataShape(userData);
+  ensureDataShape(fromData);
+
+  const incoming = userData.social.incomingRequests.find(r => normalizeEmail(r.email) === from);
+  if (!incoming) throw new Error('Friend request not found.');
+
+  const userLite = userLiteByEmail(user);
+  const fromLite = userLiteByEmail(from);
+  if (!userLite || !fromLite) throw new Error('Unable to load account data.');
+
+  userData.social.incomingRequests = userData.social.incomingRequests.filter(r => normalizeEmail(r.email) !== from);
+  fromData.social.outgoingRequests = fromData.social.outgoingRequests.filter(r => normalizeEmail(r.email) !== user);
+
+  if (!userData.social.friends.some(f => normalizeEmail(f.email) === from)) userData.social.friends.unshift(fromLite);
+  if (!fromData.social.friends.some(f => normalizeEmail(f.email) === user)) fromData.social.friends.unshift(userLite);
+
+  saveData(user, userData);
+  saveData(from, fromData);
+}
+
+export function rejectFriendRequest(userEmail, fromEmailRaw) {
+  const user = normalizeEmail(userEmail);
+  const from = normalizeEmail(fromEmailRaw);
+  const userData = getData(user);
+  const fromData = getAccountData(from);
+  if (!userData || !fromData) throw new Error('Account not found.');
+
+  ensureDataShape(userData);
+  ensureDataShape(fromData);
+
+  userData.social.incomingRequests = userData.social.incomingRequests.filter(r => normalizeEmail(r.email) !== from);
+  fromData.social.outgoingRequests = fromData.social.outgoingRequests.filter(r => normalizeEmail(r.email) !== user);
+
+  saveData(user, userData);
+  saveData(from, fromData);
+}
+
+export function getFriendsLeaderboard(email) {
+  const userEmail = normalizeEmail(email);
+  const d = getData(userEmail);
+  if (!d) return [];
+  ensureDataShape(d);
+
+  const participants = [{ email: userEmail, name: d.name || userEmail, isYou: true }, ...(d.social.friends || []).map(f => ({ ...f, isYou: false }))];
+
+  const unique = [];
+  const seen = new Set();
+  participants.forEach(p => {
+    const e = normalizeEmail(p.email);
+    if (!e || seen.has(e)) return;
+    seen.add(e);
+    unique.push({ ...p, email: e });
+  });
+
+  return unique.map(p => {
+    const account = getAccountData(p.email);
+    const xp = Number(account?.gamification?.xp || 0);
+    const levelInfo = getLevelInfo(xp);
+    return {
+      ...p,
+      name: String(account?.name || p.name || p.email),
+      xp,
+      level: levelInfo.level,
+      title: getLevelTitle(levelInfo.level),
+    };
+  }).sort((a, b) => b.xp - a.xp).map((row, idx) => ({ ...row, rank: idx + 1 }));
 }

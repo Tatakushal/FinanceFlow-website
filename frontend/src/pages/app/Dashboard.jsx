@@ -7,10 +7,9 @@ import TxList from '../../components/common/TxList';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { data, totals, fmt } = useFinance();
+  const { totals, fmt, gamification } = useFinance();
 
   const firstName = user?.name?.split(' ')[0] || 'there';
-  const savingRate = parseFloat(totals.rate || 0);
 
   return (
     <AppLayout
@@ -43,6 +42,22 @@ export default function Dashboard() {
             <div className="balance-col-label">Saved</div>
             <div className="balance-col-value" style={{ color:'var(--accent)' }}>{fmt(totals.saved)}</div>
           </div>
+        </div>
+      </div>
+
+      <div className="card-sm" style={{ marginBottom: 22, padding: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Level {gamification.level}</div>
+            <div style={{ fontFamily: 'var(--fd)', fontSize: 18, fontWeight: 800, color: '#fff' }}>{gamification.title}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontFamily: 'var(--fd)', fontSize: 20, fontWeight: 800, color: 'var(--accent)' }}>{gamification.xp} XP</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{gamification.xpToNextLevel} XP to next level</div>
+          </div>
+        </div>
+        <div className="pbar" style={{ height: 10 }}>
+          <div className="pfill" style={{ width: `${gamification.progressPct}%`, background: 'linear-gradient(90deg,var(--primary),var(--accent))' }} />
         </div>
       </div>
 
