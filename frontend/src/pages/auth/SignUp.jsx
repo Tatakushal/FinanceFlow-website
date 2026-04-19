@@ -40,12 +40,17 @@ export default function SignUp() {
     }
   }
 
-  function doSocialSignUp(provider) {
-    const n = form.name.trim() || 'New User';
-    const e = form.email.trim() || `user.${provider.toLowerCase()}@financeflow.app`;
-    socialLogin(provider);
-    showToast(`Welcome via ${provider}!`);
-    setTimeout(() => navigate('/app/dashboard'), 800);
+  async function doSocialSignUp(provider) {
+    setLoading(true);
+    try {
+      await socialLogin(provider);
+      showToast(`Welcome via ${provider}!`);
+      setTimeout(() => navigate('/app/dashboard'), 800);
+    } catch (err) {
+      showToast(err.message || `${provider} sign-in failed`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

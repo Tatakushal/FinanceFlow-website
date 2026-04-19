@@ -3,6 +3,7 @@ import {
   getData, saveData, addTx, deleteTx, getTotals, getNetWorth, fmtCurrency,
   getUserGamification, getFriendsLeaderboard, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, awardXp,
 } from '../services/storage';
+import { saveUserData } from '../services/firestore';
 import { useAuth } from './AuthContext';
 
 const FinanceContext = createContext(null);
@@ -28,11 +29,13 @@ export function FinanceProvider({ children }) {
     if (!user?.email) return;
     saveData(user.email, updated);
     setData({ ...updated });
+    if (user.uid) saveUserData(user.uid, updated).catch(() => {});
   }, [user]);
 
   const doAddTx = useCallback((tx) => {
     if (!user?.email) return;
     const addedTx = addTx(user.email, tx);
+    if (user.uid) saveUserData(user.uid, getData(user.email)).catch(() => {});
     refresh();
     return addedTx;
   }, [user, refresh]);
@@ -40,6 +43,7 @@ export function FinanceProvider({ children }) {
   const doDeleteTx = useCallback((txId) => {
     if (!user?.email) return;
     deleteTx(user.email, txId);
+    if (user.uid) saveUserData(user.uid, getData(user.email)).catch(() => {});
     refresh();
   }, [user, refresh]);
 
@@ -91,6 +95,7 @@ export function FinanceProvider({ children }) {
   const doAwardXp = useCallback((amount, reason) => {
     if (!user?.email) return 0;
     const gained = awardXp(user.email, amount, reason);
+    if (user.uid) saveUserData(user.uid, getData(user.email)).catch(() => {});
     refresh();
     return gained;
   }, [user, refresh]);
