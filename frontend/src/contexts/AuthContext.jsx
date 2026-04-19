@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!auth) {
-      return () => {};
+      return;
     }
 
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = useCallback(async (email, password) => {
-    if (!auth) throw new Error('Authentication is unavailable. Firebase is not configured.');
+    if (!auth) throw new Error('Authentication service is currently unavailable. Please try again later.');
     const e = email.trim().toLowerCase();
     const cred = await signInWithEmailAndPassword(auth, e, password);
     const name = cred.user.displayName || e.split('@')[0];
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = useCallback(async ({ name, email, password, mobile }) => {
-    if (!auth) throw new Error('Authentication is unavailable. Firebase is not configured.');
+    if (!auth) throw new Error('Sign up service is currently unavailable. Please try again later.');
     const e = email.trim().toLowerCase();
     const cred = await createUserWithEmailAndPassword(auth, e, password);
     await updateProfile(cred.user, { displayName: name });
@@ -87,7 +87,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const socialLogin = useCallback(async (provider) => {
-    if (!auth) throw new Error('Social login is unavailable. Firebase is not configured.');
+    if (!auth) throw new Error('Social login is currently unavailable. Please try again later.');
     if (provider !== 'Google') throw new Error('Apple sign-in is not yet supported.');
     const cred = await signInWithPopup(auth, new GoogleAuthProvider());
     const email = (cred.user.email || '').toLowerCase();
@@ -111,12 +111,9 @@ export function AuthProvider({ children }) {
   const signOut = useCallback(async () => {
     skipNext.current = true;
     logout();
-    if (!auth) {
-      setUserState(null);
-      setAuthLoading(false);
-      return;
+    if (auth) {
+      await firebaseSignOut(auth);
     }
-    await firebaseSignOut(auth);
     setUserState(null);
     setAuthLoading(false);
   }, []);
