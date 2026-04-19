@@ -39,7 +39,7 @@ export default function Dashboard() {
             <div className="balance-col-value" style={{ color:'var(--warn)' }}>{fmt(totals.spent)}</div>
           </div>
           <div className="balance-col">
-            <div className="balance-col-label">Saved</div>
+            <div className="balance-col-label">Balance</div>
             <div className="balance-col-value" style={{ color:'var(--accent)' }}>{fmt(totals.saved)}</div>
           </div>
         </div>
