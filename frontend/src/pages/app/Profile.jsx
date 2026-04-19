@@ -50,9 +50,9 @@ export default function Profile() {
               <div className="menu-info"><div className="menu-lbl">Financial Goals</div><div className="menu-sub">{(data?.goals||[]).length} active goal{(data?.goals||[]).length !== 1 ? 's' : ''}</div></div>
               <span className="menu-chev">›</span>
             </Link>
-            <Link to="/app/health-score" className="menu-row">
+            <Link to="/app/reports" className="menu-row">
               <div className="menu-ico" style={{ background:'rgba(255,184,0,.12)' }}>💯</div>
-              <div className="menu-info"><div className="menu-lbl">Health Score</div><div className="menu-sub">Your financial fitness</div></div>
+              <div className="menu-info"><div className="menu-lbl">Reports & Health Score</div><div className="menu-sub">Charts, trends, and your financial fitness</div></div>
               <span className="menu-chev">›</span>
             </Link>
           </div>

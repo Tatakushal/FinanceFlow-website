@@ -1,13 +1,34 @@
 import { useFinance } from '../../contexts/FinanceContext';
 import AppLayout from '../../components/layout/AppLayout';
 import BudgetRings from '../../components/common/BudgetRings';
-import { Link } from 'react-router-dom';
 
 export default function Reports() {
   const { data, totals, fmt } = useFinance();
+  const DEFAULT_GOAL_SCORE_OUT_OF_TEN = 5;
 
   const txs = data?.txs || [];
   const budgets = data?.budgets || [];
+  const goals = data?.goals || [];
+  const rate = parseFloat(totals.rate || 0);
+  const hasTxData = totals.income > 0;
+
+  const s1 = hasTxData ? Math.min(10, Math.round(rate / 10)) : null;
+  const overBudgets = budgets.filter(b => b.spent > b.lim).length;
+  const s2 = Math.max(0, 10 - overBudgets * 2);
+  const s3 = goals.length > 0
+    ? Math.round(goals.reduce((sum, g) => sum + Math.min(g.saved / g.target, 1), 0) / goals.length * 10)
+    : null;
+
+  const score = s1 !== null ? Math.round((s1 + s2 + (s3 ?? DEFAULT_GOAL_SCORE_OUT_OF_TEN)) / 3 * 10) : null;
+  const healthLabel = score === null ? 'Calculate' : score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work';
+  const healthMsg = score === null ? 'Add transactions to get your score' : score >= 80 ? '🏆 You\'re in the top tier of financial health!' : '💡 Keep building good habits to improve your score.';
+  const healthTip = score === null
+    ? 'Add income, track expenses, and set goals to see your personalised health score.'
+    : rate < 20
+      ? 'Aim to save 20%+ of your income each month. Start by reducing your largest expense category.'
+      : overBudgets > 0
+        ? `You exceeded ${overBudgets} budget(s). Review your spending in those categories.`
+        : 'Great job! Keep contributing to your goals monthly to accelerate your score.';
 
   // Spending by category
   const catMap = {};
@@ -87,6 +108,43 @@ export default function Reports() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom:28 }}>
+        <div style={{ fontFamily:'var(--fd)', fontSize:18, fontWeight:800, color:'#fff', marginBottom:16 }}>
+          Finance Health Score <span aria-hidden="true">💯</span>
+        </div>
+        <div className="grid-2" style={{ gap:20 }}>
+          <div className="card-sm" style={{ textAlign:'center' }}>
+            <div style={{ fontFamily:'var(--fd)', fontSize:42, fontWeight:900, color:'var(--gold)', lineHeight:1, marginBottom:6 }}>
+              {score !== null ? score : '—'}
+            </div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:6 }}>{healthLabel}</div>
+            <div style={{ fontSize:13, color:'var(--text-muted)' }}>{healthMsg}</div>
+          </div>
+          <div>
+            {[
+              { label:'💰 Savings Rate', score:s1, bar:'var(--primary)', tip:`Savings rate: ${rate}%` },
+              { label:'🎯 Budget Adherence', score:s2, bar:'var(--gold)', tip: overBudgets > 0 ? `${overBudgets} budget(s) exceeded` : 'All budgets on track ✓' },
+              { label:'🚀 Goal Progress', score:s3, bar:'var(--accent)', tip: s3 !== null ? `${goals.length} goal(s) tracked` : 'Set goals to improve this score' },
+            ].map(item => (
+              <div key={item.label} style={{ marginBottom:10 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                  <span style={{ fontSize:13, color:'var(--text)' }}>{item.label}</span>
+                  <span style={{ fontSize:14, fontWeight:800, color:item.bar }}>{item.score !== null ? `${item.score}/10` : '—'}</span>
+                </div>
+                <div className="pbar">
+                  <div className="pfill" style={{ background:item.bar, width:`${(item.score ?? 0) * 10}%` }} />
+                </div>
+                <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:5 }}>{item.tip}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card-sm" style={{ marginTop:16, background:'var(--accent-dim)', borderColor:'rgba(61,127,255,.2)' }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'var(--accent)', marginBottom:6 }}>🤖 FlowAI Tip</div>
+          <div style={{ fontSize:14, color:'var(--text)', lineHeight:1.65 }}>{healthTip}</div>
         </div>
       </div>
 
