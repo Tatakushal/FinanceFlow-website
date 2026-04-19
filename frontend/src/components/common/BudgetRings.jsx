@@ -8,11 +8,11 @@ export default function BudgetRings({ max = 6 }) {
 
   const decodeIcon = (value) => {
     if (typeof value !== 'string') return '';
-    return value.replace(/&#(x?[0-9a-fA-F]+);/g, (_, code) => {
+    return value.replace(/&#(x?[0-9a-fA-F]+);/g, (match, code) => {
       const point = code.toLowerCase().startsWith('x')
         ? Number.parseInt(code.slice(1), 16)
         : Number.parseInt(code, 10);
-      return Number.isFinite(point) ? String.fromCodePoint(point) : _;
+      return Number.isFinite(point) ? String.fromCodePoint(point) : match;
     });
   };
 

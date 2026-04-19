@@ -4,6 +4,7 @@ import BudgetRings from '../../components/common/BudgetRings';
 
 export default function Reports() {
   const { data, totals, fmt } = useFinance();
+  const DEFAULT_GOAL_PROGRESS_SCORE = 5;
 
   const txs = data?.txs || [];
   const budgets = data?.budgets || [];
@@ -18,7 +19,7 @@ export default function Reports() {
     ? Math.round(goals.reduce((sum, g) => sum + Math.min(g.saved / g.target, 1), 0) / goals.length * 10)
     : null;
 
-  const score = s1 !== null ? Math.round(((s1 ?? 0) + s2 + (s3 ?? 5)) / 3 * 10) : null;
+  const score = s1 !== null ? Math.round(((s1 ?? 0) + s2 + (s3 ?? DEFAULT_GOAL_PROGRESS_SCORE)) / 3 * 10) : null;
   const healthLabel = score === null ? 'Calculate' : score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work';
   const healthMsg = score === null ? 'Add transactions to get your score' : score >= 80 ? '🏆 You\'re in the top tier of financial health!' : '💡 Keep building good habits to improve your score.';
   const healthTip = score === null
@@ -111,7 +112,9 @@ export default function Reports() {
       </div>
 
       <div className="card" style={{ marginBottom:28 }}>
-        <div style={{ fontFamily:'var(--fd)', fontSize:18, fontWeight:800, color:'#fff', marginBottom:16 }}>Finance Health Score 💯</div>
+        <div style={{ fontFamily:'var(--fd)', fontSize:18, fontWeight:800, color:'#fff', marginBottom:16 }}>
+          Finance Health Score <span aria-hidden="true">💯</span>
+        </div>
         <div className="grid-2" style={{ gap:20 }}>
           <div className="card-sm" style={{ textAlign:'center' }}>
             <div style={{ fontFamily:'var(--fd)', fontSize:42, fontWeight:900, color:'var(--gold)', lineHeight:1, marginBottom:6 }}>
