@@ -10,12 +10,32 @@ import {
 } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { loadUserData, saveUserData } from '../services/firestore';
-import { freshData, saveData, logout, getData } from '../services/storage';
+import {
+  freshData,
+  saveData,
+  logout,
+  getData,
+  getUser,
+  signup as localSignup,
+  login as localLogin,
+  setPassword,
+  verifyPassword,
+  getAccountName,
+} from '../services/storage';
 
 const AuthContext = createContext(null);
 
+function getInitialLocalUser() {
+  if (auth) return null;
+  const localUser = getUser();
+  if (!localUser?.email) return null;
+  const email = String(localUser.email).trim().toLowerCase();
+  const name = String(localUser.name || '').trim() || email.split('@')[0] || email;
+  return { name, email };
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUserState] = useState(null);
+  const [user, setUserState] = useState(() => getInitialLocalUser());
   const [authLoading, setAuthLoading] = useState(() => Boolean(auth));
 
   // Track whether an explicit sign-in/up/out already handled the state update
@@ -49,8 +69,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = useCallback(async (email, password) => {
-    if (!auth) throw new Error('Authentication service is currently unavailable. Please try again later.');
     const e = email.trim().toLowerCase();
+    if (!auth) {
+      const name = getAccountName(e);
+      if (!name) throw new Error('Account not found. Please sign up first.');
+      const ok = await verifyPassword(e, password, { enrollIfMissing: true });
+      if (!ok) throw new Error('Incorrect password. Please try again.');
+      localLogin(name, e);
+      const u = { name, email: e };
+      setUserState(u);
+      setAuthLoading(false);
+      return u;
+    }
     const cred = await signInWithEmailAndPassword(auth, e, password);
     const name = cred.user.displayName || e.split('@')[0];
     const uid = cred.user.uid;
@@ -70,8 +100,22 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = useCallback(async ({ name, email, password, mobile }) => {
-    if (!auth) throw new Error('Sign up service is currently unavailable. Please try again later.');
     const e = email.trim().toLowerCase();
+    if (!auth) {
+      localSignup(name, e, 0);
+      await setPassword(e, password);
+      if (mobile) {
+        const localData = getData(e);
+        if (localData) {
+          localData.mobile = mobile;
+          saveData(e, localData);
+        }
+      }
+      const u = { name, email: e };
+      setUserState(u);
+      setAuthLoading(false);
+      return u;
+    }
     const cred = await createUserWithEmailAndPassword(auth, e, password);
     await updateProfile(cred.user, { displayName: name });
     const uid = cred.user.uid;
