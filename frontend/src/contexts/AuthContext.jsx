@@ -24,13 +24,14 @@ import {
 } from '../services/storage';
 
 const AuthContext = createContext(null);
+const INITIAL_INCOME = 0;
 
 function getInitialLocalUser() {
   if (auth) return null;
   const localUser = getUser();
   if (!localUser?.email) return null;
   const email = String(localUser.email).trim().toLowerCase();
-  const name = String(localUser.name || '').trim() || email.split('@')[0] || email;
+  const name = String(localUser.name || '').trim() || email.split('@')[0];
   return { name, email };
 }
 
@@ -72,9 +73,9 @@ export function AuthProvider({ children }) {
     const e = email.trim().toLowerCase();
     if (!auth) {
       const name = getAccountName(e);
-      if (!name) throw new Error('Account not found. Please sign up first.');
-      const ok = await verifyPassword(e, password, { enrollIfMissing: true });
-      if (!ok) throw new Error('Incorrect password. Please try again.');
+      if (!name) throw new Error('Invalid email or password.');
+      const ok = await verifyPassword(e, password, { enrollIfMissing: false });
+      if (!ok) throw new Error('Invalid email or password.');
       localLogin(name, e);
       const u = { name, email: e };
       setUserState(u);
@@ -102,7 +103,7 @@ export function AuthProvider({ children }) {
   const signUp = useCallback(async ({ name, email, password, mobile }) => {
     const e = email.trim().toLowerCase();
     if (!auth) {
-      localSignup(name, e, 0);
+      localSignup(name, e, INITIAL_INCOME);
       await setPassword(e, password);
       if (mobile) {
         const localData = getData(e);
@@ -120,7 +121,7 @@ export function AuthProvider({ children }) {
     await updateProfile(cred.user, { displayName: name });
     const uid = cred.user.uid;
     skipNext.current = true;
-    const newData = freshData(name, e, 0);
+    const newData = freshData(name, e, INITIAL_INCOME);
     if (mobile) newData.mobile = mobile;
     saveData(e, newData);
     await saveUserData(uid, newData);
