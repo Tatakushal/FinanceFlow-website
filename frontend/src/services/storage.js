@@ -245,7 +245,8 @@ export function getTotals(email) {
 export function addTx(email, tx) {
   const d = getData(email);
   if (!d) return;
-  const dateLabel = tx?.date != null ? formatDateLabel(tx.date) : formatDateLabel(new Date());
+  const hasDate = tx?.date !== null && tx?.date !== undefined;
+  const dateLabel = hasDate ? formatDateLabel(tx.date) : formatDateLabel(new Date());
   const newTx = { ...tx, id: Date.now(), date: dateLabel };
   const awardedXp = calculateTransactionXP(d, newTx);
   if (awardedXp > 0) {
@@ -393,11 +394,11 @@ export function sendFriendRequest(fromEmail, toEmailRaw) {
   if (from === to) throw new Error('You cannot send a friend request to yourself.');
 
   const fromData = getData(from);
-  const toData = getAccountData(to);
-  if (!fromData || !toData) throw new Error('Account not found for that email.');
+  const targetAccount = getAccountData(to);
+  if (!fromData || !targetAccount) throw new Error('Account not found for that email.');
 
   ensureDataShape(fromData);
-  ensureDataShape(toData);
+  ensureDataShape(targetAccount);
 
   if (fromData.social.friends.some(f => normalizeEmail(f.email) === to)) throw new Error('Already connected.');
   if (fromData.social.outgoingRequests.some(f => normalizeEmail(f.email) === to)) throw new Error('Request already sent.');
@@ -408,10 +409,10 @@ export function sendFriendRequest(fromEmail, toEmailRaw) {
   if (!fromLite || !toLite) throw new Error('Unable to load account data.');
 
   fromData.social.outgoingRequests.unshift(toLite);
-  toData.social.incomingRequests.unshift(fromLite);
+  targetAccount.social.incomingRequests.unshift(fromLite);
 
   saveData(from, fromData);
-  saveData(to, toData);
+  saveData(to, targetAccount);
 }
 
 export function acceptFriendRequest(userEmail, fromEmailRaw) {

@@ -32,9 +32,9 @@ export function FinanceProvider({ children }) {
 
   const doAddTx = useCallback((tx) => {
     if (!user?.email) return;
-    const created = addTx(user.email, tx);
+    const addedTx = addTx(user.email, tx);
     refresh();
-    return created;
+    return addedTx;
   }, [user, refresh]);
 
   const doDeleteTx = useCallback((txId) => {
