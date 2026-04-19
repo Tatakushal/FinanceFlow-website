@@ -10,6 +10,15 @@ export default function BudgetRings({ max = 6, manage = false }) {
   const [editingCat, setEditingCat] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ cat: '', ico: '💰', lim: '', clr: '#3D7FFF' });
+  const normalizeCategoryName = (value) => String(value || '').trim().toLowerCase();
+  const calcSpentForCategory = (category) => {
+    const catNorm = normalizeCategoryName(category);
+    return (data?.txs || []).reduce((sum, tx) => {
+      if (tx?.type !== 'expense') return sum;
+      if (normalizeCategoryName(tx?.cat) !== catNorm) return sum;
+      return sum + (Number(tx?.amt) || 0);
+    }, 0);
+  };
 
   const decodeIcon = (value) => {
     if (typeof value !== 'string') return '';
@@ -54,14 +63,14 @@ export default function BudgetRings({ max = 6, manage = false }) {
   const saveBudget = () => {
     if (!data) return;
     const cat = form.cat.trim();
-    const catNorm = cat.toLowerCase();
-    const editingCatNorm = String(editingCat || '').trim().toLowerCase();
+    const catNorm = normalizeCategoryName(cat);
+    const editingCatNorm = normalizeCategoryName(editingCat);
     const lim = Number(form.lim);
     if (!cat) { showToast('Enter a budget category.'); return; }
     if (!Number.isFinite(lim) || lim <= 0) { showToast('Enter a valid budget limit.'); return; }
 
     const duplicate = allBudgets.some((b) => {
-      const current = String(b.cat || '').trim().toLowerCase();
+      const current = normalizeCategoryName(b.cat);
       if (editingCatNorm && current === editingCatNorm) return false;
       return current === catNorm;
     });
@@ -73,11 +82,11 @@ export default function BudgetRings({ max = 6, manage = false }) {
     let updatedBudgets;
     if (editingCat) {
       updatedBudgets = allBudgets.map(b => (b.cat === editingCat
-        ? { ...b, cat, ico: icon, lim, clr: color }
+        ? { ...b, cat: editingCat, ico: icon, lim, clr: color }
         : b));
       showToast('Budget updated');
     } else {
-      updatedBudgets = [{ cat, ico: icon, spent: 0, lim, clr: color }, ...allBudgets];
+      updatedBudgets = [{ cat, ico: icon, spent: calcSpentForCategory(cat), lim, clr: color }, ...allBudgets];
       showToast('Budget added');
     }
 
@@ -150,7 +159,8 @@ export default function BudgetRings({ max = 6, manage = false }) {
           <div className="form-row">
             <div className="fw">
               <label className="flbl">Category</label>
-              <input className="finput" value={form.cat} onChange={e => setForm(f => ({ ...f, cat: e.target.value }))} placeholder="e.g. Food" />
+              <input className="finput" value={form.cat} disabled={!!editingCat} onChange={e => setForm(f => ({ ...f, cat: e.target.value }))} placeholder="e.g. Food" />
+              {editingCat ? <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>Category is locked for existing budgets to keep spend tracking accurate.</div> : null}
             </div>
             <div className="fw">
               <label className="flbl">Icon</label>
