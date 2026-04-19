@@ -22,16 +22,22 @@ export default function Sidebar() {
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const closeSidebar = () => {
+    document.body.classList.remove('sidebar-open');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (overlay) overlay.classList.remove('on');
+  };
 
   function handleLogout() {
+    closeSidebar();
     signOut();
     showToast('Signed out!');
     navigate('/');
   }
 
-  return (
+    return (
     <>
-      <div className="sidebar-overlay" id="sidebar-overlay" onClick={() => document.body.classList.remove('sidebar-open')} />
+      <div className="sidebar-overlay" id="sidebar-overlay" onClick={closeSidebar} />
       <aside className="sidebar" id="sidebar">
         <div className="sidebar-section">Main</div>
         {NAV.map(item => (
@@ -39,6 +45,7 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) => `s-link${isActive ? ' active' : ''}`}
+            onClick={closeSidebar}
           >
             <span className="s-link-icon">{item.icon}</span>
             {item.label}
@@ -51,6 +58,7 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) => `s-link${isActive ? ' active' : ''}`}
+            onClick={closeSidebar}
           >
             <span className="s-link-icon">{item.icon}</span>
             {item.label}

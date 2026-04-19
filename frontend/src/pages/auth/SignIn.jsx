@@ -77,7 +77,7 @@ export default function SignIn() {
               </button>
             </div>
             <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>
-              New phone/device? Your account is stored locally unless cloud sync is configured.
+              New phone/device? Accounts are local to each device unless cloud sync is configured by the deployment.
             </div>
             <button className="btn btn-p btn-full" type="submit" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign In →'}
