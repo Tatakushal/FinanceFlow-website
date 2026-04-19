@@ -385,6 +385,17 @@ select.finput option{background:#111C2D;color:#fff;}
 .ring-lbl{font-size:13px;color:var(--text-muted);margin-top:8px;font-weight:600;}
 .ring-pct{font-size:11px;color:var(--text-dim);margin-top:2px;}
 .ring-pct.over{color:var(--warn);font-weight:700;}
+.budget-rings-wrap{width:100%;}
+.budget-rings-actions{display:flex;justify-content:flex-end;margin-bottom:12px;}
+.budget-rings-add-btn{padding:8px 12px;font-size:12px;}
+.budget-rings-empty{color:var(--text-muted);margin-bottom:12px;}
+.budget-rings-item-actions{display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap;}
+.budget-rings-item-btn{padding:6px 10px;font-size:11px;}
+.budget-rings-remove-btn{color:var(--warn);}
+.budget-rings-form{margin-top:14px;padding:14px;}
+.budget-rings-form-title{font-family:var(--fd);font-size:14px;font-weight:800;margin-bottom:10px;}
+.budget-rings-form-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.budget-rings-form-btn{padding:10px 14px;font-size:13px;}
 
 /* ── NUMPAD ── */
 .add-tx-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;}
@@ -556,6 +567,7 @@ select.finput option{background:#111C2D;color:#fff;}
   .chat-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .amt-val{font-size:60px;}
   .balance-amount{font-size:38px;}
+  .budget-rings-actions{justify-content:flex-start;}
 }
 
 /* ════════════════════════════════════════════
@@ -576,6 +588,7 @@ select.finput option{background:#111C2D;color:#fff;}
   .btn-tb-primary{padding:8px 14px;font-size:13px;}
   .tb-back{padding:8px 12px;font-size:13px;}
   .tb-title{font-size:17px;}
+  .budget-rings-form-actions .btn{flex:1;min-width:120px;}
 
   /* Pages with a centered title (e.g., Add Expense/Income) */
   .topbar.ff-has-title{justify-content:flex-start;}

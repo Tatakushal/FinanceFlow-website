@@ -131,7 +131,7 @@ export default function Dashboard() {
             <Link to="/app/reports" className="sec-lnk">View all →</Link>
           </div>
           <div className="card-sm">
-            <BudgetRings max={6} />
+            <BudgetRings max={6} manage />
           </div>
 
           <Link to="/app/ai-chat" id="ai-insight-card" style={{ display:'block', marginTop:16, background:'linear-gradient(135deg,rgba(61,127,255,0.1),rgba(0,229,160,0.05))', border:'1px solid rgba(61,127,255,.2)', borderRadius:14, padding:16, textDecoration:'none' }}>

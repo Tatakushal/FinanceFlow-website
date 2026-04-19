@@ -89,7 +89,7 @@ export default function Reports() {
         {/* Budget Rings */}
         <div className="card">
           <div style={{ fontFamily:'var(--fd)', fontSize:18, fontWeight:800, color:'#fff', marginBottom:20 }}>Budget Rings</div>
-          <BudgetRings max={6} />
+          <BudgetRings max={6} manage />
         </div>
 
         {/* Category breakdown */}
