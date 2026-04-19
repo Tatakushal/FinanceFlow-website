@@ -12,7 +12,9 @@ export function AuthProvider({ children }) {
 
   const signIn = useCallback(async (email, password) => {
     const e = email.trim().toLowerCase();
-    if (!checkAccount(e)) throw new Error('No account found. Create one first.');
+    if (!checkAccount(e)) {
+      throw new Error('No account found on this device. Use Sign up here, or enable cloud sync for cross-device login.');
+    }
     const ok = await verifyPassword(e, password, { enrollIfMissing: true });
     if (!ok) throw new Error('Incorrect password.');
     const name = getAccountName(e) || e.split('@')[0];
