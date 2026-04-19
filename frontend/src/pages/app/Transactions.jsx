@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useFinance } from '../../contexts/FinanceContext';
 import AppLayout from '../../components/layout/AppLayout';
 
+const XP_BOOST_THRESHOLD = 25;
+
 export default function Transactions() {
   const { data, fmt, doDeleteTx } = useFinance();
   const [filter, setFilter] = useState('all');
@@ -13,8 +15,8 @@ export default function Transactions() {
     if (filter === 'expense' && t.type !== 'expense') return false;
     if (filter === 'income' && t.type !== 'income') return false;
     const txXp = Number(t?.xp || 0);
-    if (xpFilter === 'boost' && txXp < 25) return false;
-    if (xpFilter === 'basic' && (txXp < 1 || txXp >= 25)) return false;
+    if (xpFilter === 'boost' && txXp < XP_BOOST_THRESHOLD) return false;
+    if (xpFilter === 'basic' && (txXp < 1 || txXp >= XP_BOOST_THRESHOLD)) return false;
     if (xpFilter === 'none' && txXp > 0) return false;
     if (search) {
       const q = search.toLowerCase();

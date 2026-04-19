@@ -13,7 +13,7 @@ const LEVEL_TITLES = [
   'Cashflow Captain',
   'Money Master',
   'Wealth Architect',
-  'Legend Investor',
+  'Legendary Investor',
 ];
 
 export const DEFAULT_BUDGETS = [
@@ -245,7 +245,7 @@ export function getTotals(email) {
 export function addTx(email, tx) {
   const d = getData(email);
   if (!d) return;
-  const dateLabel = tx?.date ? formatDateLabel(tx.date) : formatDateLabel(new Date());
+  const dateLabel = tx?.date != null ? formatDateLabel(tx.date) : formatDateLabel(new Date());
   const newTx = { ...tx, id: Date.now(), date: dateLabel };
   const awardedXp = calculateTransactionXP(d, newTx);
   if (awardedXp > 0) {
@@ -362,7 +362,9 @@ export function getLevelInfo(xp = 0) {
 }
 
 export function getLevelTitle(level = 1) {
-  const idx = Math.max(0, Math.min(LEVEL_TITLES.length - 1, Number(level) - 1));
+  const numLevel = Number(level);
+  if (!Number.isFinite(numLevel)) return LEVEL_TITLES[0];
+  const idx = Math.max(0, Math.min(LEVEL_TITLES.length - 1, numLevel - 1));
   return LEVEL_TITLES[idx];
 }
 
@@ -462,7 +464,8 @@ export function getFriendsLeaderboard(email) {
   if (!d) return [];
   ensureDataShape(d);
 
-  const participants = [{ email: userEmail, name: d.name || userEmail, isYou: true }, ...(d.social.friends || []).map(f => ({ ...f, isYou: false }))];
+  const currentUser = { email: userEmail, name: d.name || userEmail, isYou: true };
+  const participants = [currentUser, ...(d.social.friends || []).map(f => ({ ...f, isYou: false }))];
 
   const unique = [];
   const seen = new Set();

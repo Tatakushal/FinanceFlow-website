@@ -6,6 +6,7 @@ import {
 import { useAuth } from './AuthContext';
 
 const FinanceContext = createContext(null);
+const FRIEND_ACCEPT_XP = 20;
 
 export function FinanceProvider({ children }) {
   const { user } = useAuth();
@@ -76,7 +77,7 @@ export function FinanceProvider({ children }) {
   const doAcceptFriendRequest = useCallback((fromEmail) => {
     if (!user?.email) return;
     acceptFriendRequest(user.email, fromEmail);
-    const gained = awardXp(user.email, 20, 'Friend request accepted');
+    const gained = awardXp(user.email, FRIEND_ACCEPT_XP, 'Friend request accepted');
     refresh();
     return gained;
   }, [user, refresh]);

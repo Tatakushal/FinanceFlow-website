@@ -3,6 +3,11 @@ import { useFinance } from '../../contexts/FinanceContext';
 import { useToast } from '../../contexts/ToastContext';
 import AppLayout from '../../components/layout/AppLayout';
 
+const MIN_SAVINGS_XP = 8;
+const MAX_SAVINGS_XP = 40;
+const SAVINGS_XP_PER_AMOUNT = 200;
+const GOAL_COMPLETION_XP = 60;
+
 export default function Goals() {
   const { data, save, fmt, doAwardXp } = useFinance();
   const { showToast } = useToast();
@@ -10,7 +15,7 @@ export default function Goals() {
   const [form, setForm] = useState({ name:'', emoji:'🎯', target:'', saved:'0' });
 
   const goals = data?.goals || [];
-  const calculateSavingsXp = (amount) => Math.max(8, Math.min(40, Math.round(amount / 200)));
+  const calculateSavingsXp = (amount) => Math.max(MIN_SAVINGS_XP, Math.min(MAX_SAVINGS_XP, Math.round(amount / SAVINGS_XP_PER_AMOUNT)));
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -43,7 +48,7 @@ export default function Goals() {
     const isNowComplete = refreshedGoal && refreshedGoal.saved >= refreshedGoal.target;
     let gained = doAwardXp(calculateSavingsXp(amt), `Saved toward goal: ${goal.name}`);
     if (!wasComplete && isNowComplete) {
-      gained += doAwardXp(60, `Goal completed: ${goal.name}`);
+      gained += doAwardXp(GOAL_COMPLETION_XP, `Goal completed: ${goal.name}`);
     }
     showToast(`Added ${fmt(amt)} to goal${gained ? ` • +${gained} XP` : ''}!`);
   }
