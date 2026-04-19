@@ -35,10 +35,17 @@ export default function SignIn() {
     }
   }
 
-  function doSocialLogin(provider) {
-    const result = socialLogin(provider);
-    showToast(`✅ Signed in with ${provider}`);
-    setTimeout(() => navigate('/app/dashboard'), 700);
+  async function doSocialLogin(provider) {
+    setLoading(true);
+    try {
+      await socialLogin(provider);
+      showToast(`✅ Signed in with ${provider}`);
+      setTimeout(() => navigate('/app/dashboard'), 700);
+    } catch (err) {
+      showToast(err.message || `${provider} sign-in failed`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -77,7 +84,7 @@ export default function SignIn() {
               </button>
             </div>
             <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>
-              New phone/device? Accounts are local to each device unless cloud sync is configured by the deployment.
+              Your account syncs across devices via Firebase.
             </div>
             <button className="btn btn-p btn-full" type="submit" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign In →'}

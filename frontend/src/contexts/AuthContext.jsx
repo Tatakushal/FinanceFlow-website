@@ -1,60 +1,118 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
-  getUser, setUser, login, logout, signup,
-  setPassword, verifyPassword, checkAccount,
-  getAccountName, getData, freshData,
-} from '../services/storage';
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile,
+} from 'firebase/auth';
+import { auth } from '../services/firebase';
+import { loadUserData, saveUserData } from '../services/firestore';
+import { freshData, saveData, logout, getData } from '../services/storage';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUserState] = useState(() => getUser());
+  const [user, setUserState] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Track whether an explicit sign-in/up/out already handled the state update
+  // so the onAuthStateChanged listener skips re-loading on those events.
+  const skipNext = useRef(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      if (skipNext.current) {
+        skipNext.current = false;
+        setAuthLoading(false);
+        return;
+      }
+      // Session restoration on page reload, or sign-out from another tab
+      if (fbUser) {
+        const email = (fbUser.email || '').toLowerCase();
+        const name = fbUser.displayName || email.split('@')[0] || fbUser.uid;
+        const fsData = await loadUserData(fbUser.uid);
+        if (fsData) saveData(email, fsData);
+        setUserState({ name, email, uid: fbUser.uid });
+      } else {
+        setUserState(null);
+      }
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
 
   const signIn = useCallback(async (email, password) => {
     const e = email.trim().toLowerCase();
-    if (!checkAccount(e)) {
-      throw new Error('No account found on this device. Accounts are local unless cloud sync is configured.');
+    const cred = await signInWithEmailAndPassword(auth, e, password);
+    const name = cred.user.displayName || e.split('@')[0];
+    const uid = cred.user.uid;
+    skipNext.current = true;
+    // Sync Firestore → localStorage; upload local data if first cloud login
+    const fsData = await loadUserData(uid);
+    if (fsData) {
+      saveData(e, fsData);
+    } else {
+      const local = getData(e);
+      if (local) saveUserData(uid, local).catch(() => {});
     }
-    const ok = await verifyPassword(e, password, { enrollIfMissing: true });
-    if (!ok) throw new Error('Incorrect password.');
-    const name = getAccountName(e) || e.split('@')[0];
-    login(name, e);
-    setUserState({ name, email: e });
-    return { name, email: e };
+    const u = { name, email: e, uid };
+    setUserState(u);
+    setAuthLoading(false);
+    return u;
   }, []);
 
   const signUp = useCallback(async ({ name, email, password, mobile }) => {
     const e = email.trim().toLowerCase();
-    if (checkAccount(e)) throw new Error('Account already exists. Please sign in.');
-    signup(name, e, 0);
-    // Persist mobile if provided
-    if (mobile) {
-      const { saveData } = await import('../services/storage');
-      const d = getData(e);
-      if (d) {
-        d.mobile = mobile;
-        saveData(e, d);
-      }
+    const cred = await createUserWithEmailAndPassword(auth, e, password);
+    await updateProfile(cred.user, { displayName: name });
+    const uid = cred.user.uid;
+    skipNext.current = true;
+    const newData = freshData(name, e, 0);
+    if (mobile) newData.mobile = mobile;
+    saveData(e, newData);
+    await saveUserData(uid, newData);
+    const u = { name, email: e, uid };
+    setUserState(u);
+    setAuthLoading(false);
+    return u;
+  }, []);
+
+  const socialLogin = useCallback(async (provider) => {
+    if (provider !== 'Google') throw new Error('Apple sign-in is not yet supported.');
+    const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+    const email = (cred.user.email || '').toLowerCase();
+    const name = cred.user.displayName || email.split('@')[0] || cred.user.uid;
+    const uid = cred.user.uid;
+    skipNext.current = true;
+    const fsData = await loadUserData(uid);
+    if (fsData) {
+      saveData(email, fsData);
+    } else {
+      const newData = freshData(name, email, 0);
+      saveData(email, newData);
+      await saveUserData(uid, newData);
     }
-    await setPassword(e, password);
-    setUserState({ name, email: e });
-    return { name, email: e };
+    const u = { name, email, uid };
+    setUserState(u);
+    setAuthLoading(false);
+    return u;
   }, []);
 
-  const socialLogin = useCallback((provider) => {
-    const name = 'Demo User';
-    const email = 'demo@financeflow.app';
-    login(name, email);
-    setUserState({ name, email });
-    return { name, email };
-  }, []);
-
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
+    skipNext.current = true;
     logout();
+    await firebaseSignOut(auth);
     setUserState(null);
+    setAuthLoading(false);
   }, []);
 
-  const value = useMemo(() => ({ user, signIn, signUp, socialLogin, signOut }), [user, signIn, signUp, socialLogin, signOut]);
+  const value = useMemo(
+    () => ({ user, authLoading, signIn, signUp, socialLogin, signOut }),
+    [user, authLoading, signIn, signUp, socialLogin, signOut],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
