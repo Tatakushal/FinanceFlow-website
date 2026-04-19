@@ -54,11 +54,17 @@ export default function BudgetRings({ max = 6, manage = false }) {
   const saveBudget = () => {
     if (!data) return;
     const cat = form.cat.trim();
+    const catNorm = cat.toLowerCase();
+    const editingCatNorm = String(editingCat || '').trim().toLowerCase();
     const lim = Number(form.lim);
     if (!cat) { showToast('Enter a budget category.'); return; }
     if (!Number.isFinite(lim) || lim <= 0) { showToast('Enter a valid budget limit.'); return; }
 
-    const duplicate = allBudgets.some(b => b.cat === cat && b.cat !== editingCat);
+    const duplicate = allBudgets.some((b) => {
+      const current = String(b.cat || '').trim().toLowerCase();
+      if (editingCatNorm && current === editingCatNorm) return false;
+      return current === catNorm;
+    });
     if (duplicate) { showToast('A budget with this category already exists.'); return; }
 
     const icon = form.ico.trim() || '💰';
@@ -82,21 +88,21 @@ export default function BudgetRings({ max = 6, manage = false }) {
   if (!budgets.length && !manage) return null;
 
   return (
-    <div>
+    <div className="budget-rings-wrap">
       {manage ? (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-          <button className="btn btn-s" style={{ padding: '8px 12px', fontSize: 12 }} onClick={startAdd}>
+        <div className="budget-rings-actions">
+          <button className="btn btn-s budget-rings-add-btn" onClick={startAdd}>
             + Add Budget
           </button>
         </div>
       ) : null}
 
       {!budgets.length && manage ? (
-        <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>No budget rings yet. Add one to start tracking.</div>
+        <div className="budget-rings-empty">No budget rings yet. Add one to start tracking.</div>
       ) : null}
 
       <div className="rings-grid">
-        {budgets.map((b, idx) => {
+        {budgets.map((b) => {
           const pct = b.lim > 0 ? Math.min(b.spent / b.lim * 100, 100) : 0;
           const r = 36;
           const circ = 2 * Math.PI * r;
@@ -105,7 +111,7 @@ export default function BudgetRings({ max = 6, manage = false }) {
           const color = over ? 'var(--warn)' : b.clr || 'var(--primary)';
 
           return (
-            <div key={`${b.cat}-${idx}`} className="ring-item">
+            <div key={b.cat} className="ring-item">
               <svg width="88" height="88" viewBox="0 0 88 88">
                 <circle cx="44" cy="44" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
                 <circle
@@ -126,9 +132,9 @@ export default function BudgetRings({ max = 6, manage = false }) {
                 {fmt(b.spent)} / {fmt(b.lim)}
               </div>
               {manage ? (
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
-                  <button className="btn btn-s" style={{ padding: '6px 10px', fontSize: 11 }} onClick={() => startEdit(b)}>Edit</button>
-                  <button className="btn btn-s" style={{ padding: '6px 10px', fontSize: 11, color: 'var(--warn)' }} onClick={() => removeBudget(b.cat)}>Remove</button>
+                <div className="budget-rings-item-actions">
+                  <button className="btn btn-s budget-rings-item-btn" onClick={() => startEdit(b)}>Edit</button>
+                  <button className="btn btn-s budget-rings-item-btn budget-rings-remove-btn" onClick={() => removeBudget(b.cat)}>Remove</button>
                 </div>
               ) : null}
             </div>
@@ -137,8 +143,8 @@ export default function BudgetRings({ max = 6, manage = false }) {
       </div>
 
       {manage && showForm ? (
-        <div className="card-sm" style={{ marginTop: 14, padding: 14 }}>
-          <div style={{ fontFamily: 'var(--fd)', fontSize: 14, fontWeight: 800, marginBottom: 10 }}>
+        <div className="card-sm budget-rings-form">
+          <div className="budget-rings-form-title">
             {editingCat ? 'Edit Budget Ring' : 'Add Budget Ring'}
           </div>
           <div className="form-row">
@@ -161,11 +167,11 @@ export default function BudgetRings({ max = 6, manage = false }) {
               <input className="finput" type="color" value={form.clr} onChange={e => setForm(f => ({ ...f, clr: e.target.value }))} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn btn-p" style={{ padding: '10px 14px', fontSize: 13 }} onClick={saveBudget}>
+          <div className="budget-rings-form-actions">
+            <button className="btn btn-p budget-rings-form-btn" onClick={saveBudget}>
               {editingCat ? 'Save Changes' : 'Add Budget'}
             </button>
-            <button className="btn btn-s" style={{ padding: '10px 14px', fontSize: 13 }} onClick={resetForm}>Cancel</button>
+            <button className="btn btn-s budget-rings-form-btn" onClick={resetForm}>Cancel</button>
           </div>
         </div>
       ) : null}
