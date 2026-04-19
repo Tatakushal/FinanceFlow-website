@@ -1,8 +1,12 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
-import { getData, saveData, addTx, deleteTx, getTotals, getNetWorth, fmtCurrency } from '../services/storage';
+import {
+  getData, saveData, addTx, deleteTx, getTotals, getNetWorth, fmtCurrency,
+  getUserGamification, getFriendsLeaderboard, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, awardXp,
+} from '../services/storage';
 import { useAuth } from './AuthContext';
 
 const FinanceContext = createContext(null);
+const FRIEND_ACCEPT_XP = 20;
 
 export function FinanceProvider({ children }) {
   const { user } = useAuth();
@@ -28,8 +32,9 @@ export function FinanceProvider({ children }) {
 
   const doAddTx = useCallback((tx) => {
     if (!user?.email) return;
-    addTx(user.email, tx);
+    const addedTx = addTx(user.email, tx);
     refresh();
+    return addedTx;
   }, [user, refresh]);
 
   const doDeleteTx = useCallback((txId) => {
@@ -53,9 +58,50 @@ export function FinanceProvider({ children }) {
     return fmtCurrency(n, currency);
   }, [data]);
 
+  const gamification = useMemo(() => {
+    if (!user?.email) return getUserGamification();
+    return getUserGamification(user.email);
+  }, [user, data]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const leaderboard = useMemo(() => {
+    if (!user?.email) return [];
+    return getFriendsLeaderboard(user.email);
+  }, [user, data]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const doSendFriendRequest = useCallback((toEmail) => {
+    if (!user?.email) return;
+    sendFriendRequest(user.email, toEmail);
+    refresh();
+  }, [user, refresh]);
+
+  const doAcceptFriendRequest = useCallback((fromEmail) => {
+    if (!user?.email) return;
+    acceptFriendRequest(user.email, fromEmail);
+    const gained = awardXp(user.email, FRIEND_ACCEPT_XP, 'Friend request accepted');
+    refresh();
+    return gained;
+  }, [user, refresh]);
+
+  const doRejectFriendRequest = useCallback((fromEmail) => {
+    if (!user?.email) return;
+    rejectFriendRequest(user.email, fromEmail);
+    refresh();
+  }, [user, refresh]);
+
+  const doAwardXp = useCallback((amount, reason) => {
+    if (!user?.email) return 0;
+    const gained = awardXp(user.email, amount, reason);
+    refresh();
+    return gained;
+  }, [user, refresh]);
+
   const value = useMemo(() => ({
     data, save, refresh, totals, netWorth, fmt, doAddTx, doDeleteTx,
-  }), [data, save, refresh, totals, netWorth, fmt, doAddTx, doDeleteTx]);
+    gamification, leaderboard, doSendFriendRequest, doAcceptFriendRequest, doRejectFriendRequest, doAwardXp,
+  }), [
+    data, save, refresh, totals, netWorth, fmt, doAddTx, doDeleteTx,
+    gamification, leaderboard, doSendFriendRequest, doAcceptFriendRequest, doRejectFriendRequest, doAwardXp,
+  ]);
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
 }

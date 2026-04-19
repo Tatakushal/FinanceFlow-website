@@ -12,6 +12,7 @@ const NAV = [
   { to: '/app/subscriptions',  icon: '🔁', label: 'Subscriptions' },
   { to: '/app/health-score',   icon: '💯', label: 'Health Score' },
   { to: '/app/ai-chat',        icon: '✨', label: 'FlowAI' },
+  { to: '/app/leaderboard',    icon: '🏆', label: 'Leaderboard' },
 ];
 
 const SETTINGS_NAV = [

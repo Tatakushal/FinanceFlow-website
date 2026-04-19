@@ -3,14 +3,19 @@ import { useFinance } from '../../contexts/FinanceContext';
 import { useToast } from '../../contexts/ToastContext';
 import AppLayout from '../../components/layout/AppLayout';
 
+const MIN_SAVINGS_XP = 8;
+const MAX_SAVINGS_XP = 40;
+const SAVINGS_XP_PER_AMOUNT = 200;
+const GOAL_COMPLETION_XP = 60;
+const calculateSavingsXp = (amount) => Math.max(MIN_SAVINGS_XP, Math.min(MAX_SAVINGS_XP, Math.round(amount / SAVINGS_XP_PER_AMOUNT)));
+
 export default function Goals() {
-  const { data, save, fmt } = useFinance();
+  const { data, save, fmt, doAwardXp } = useFinance();
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name:'', emoji:'🎯', target:'', saved:'0' });
 
   const goals = data?.goals || [];
-
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   function addGoal() {
@@ -33,9 +38,18 @@ export default function Goals() {
   function addSavings(id) {
     const amt = parseFloat(prompt('How much have you saved towards this goal?') || '0');
     if (!amt || isNaN(amt)) return;
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    const wasComplete = goal.saved >= goal.target;
     const updated = { ...data, goals: goals.map(g => g.id === id ? { ...g, saved: Math.min(g.saved + amt, g.target) } : g) };
     save(updated);
-    showToast(`Added ${fmt(amt)} to goal!`);
+    const refreshedGoal = updated.goals.find(g => g.id === id);
+    const isNowComplete = refreshedGoal && refreshedGoal.saved >= refreshedGoal.target;
+    let gained = doAwardXp(calculateSavingsXp(amt), `Saved toward goal: ${goal.name}`);
+    if (!wasComplete && isNowComplete) {
+      gained += doAwardXp(GOAL_COMPLETION_XP, `Goal completed: ${goal.name}`);
+    }
+    showToast(`Added ${fmt(amt)} to goal${gained ? ` • +${gained} XP` : ''}!`);
   }
 
   return (

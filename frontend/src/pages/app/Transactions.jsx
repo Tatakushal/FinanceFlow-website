@@ -2,16 +2,22 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinance } from '../../contexts/FinanceContext';
 import AppLayout from '../../components/layout/AppLayout';
-import TxList from '../../components/common/TxList';
+
+const XP_BOOST_THRESHOLD = 25;
 
 export default function Transactions() {
   const { data, fmt, doDeleteTx } = useFinance();
   const [filter, setFilter] = useState('all');
+  const [xpFilter, setXpFilter] = useState('all');
   const [search, setSearch] = useState('');
 
   const txs = (data?.txs || []).filter(t => {
     if (filter === 'expense' && t.type !== 'expense') return false;
     if (filter === 'income' && t.type !== 'income') return false;
+    const txXp = Number(t?.xp || 0);
+    if (xpFilter === 'boost' && txXp < XP_BOOST_THRESHOLD) return false;
+    if (xpFilter === 'basic' && (txXp < 1 || txXp >= XP_BOOST_THRESHOLD)) return false;
+    if (xpFilter === 'none' && txXp > 0) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!String(t.name || '').toLowerCase().includes(q) && !String(t.cat || '').toLowerCase().includes(q)) return false;
@@ -44,6 +50,22 @@ export default function Transactions() {
             </div>
           ))}
         </div>
+        <div className="chip-row" style={{ marginBottom:0, gap:8 }}>
+          {[
+            { v: 'all', label: 'All XP' },
+            { v: 'boost', label: 'XP Boost (25+)' },
+            { v: 'basic', label: 'XP Earned' },
+            { v: 'none', label: 'No XP' },
+          ].map(item => (
+            <div
+              key={item.v}
+              className={`chip${xpFilter === item.v ? ' on' : ''}`}
+              onClick={() => setXpFilter(item.v)}
+            >
+              {item.label}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
@@ -57,7 +79,7 @@ export default function Transactions() {
             <table className="data-table" style={{ width:'100%' }}>
               <thead>
                 <tr>
-                  <th>Transaction</th><th>Category</th><th>Date</th><th>Payment</th><th style={{ textAlign:'right' }}>Amount</th><th />
+                  <th>Transaction</th><th>Category</th><th>Date</th><th>Payment</th><th style={{ textAlign:'right' }}>Amount</th><th style={{ textAlign:'right' }}>XP</th><th />
                 </tr>
               </thead>
               <tbody>
@@ -74,6 +96,9 @@ export default function Transactions() {
                     <td style={{ color:'var(--text-muted)' }}>{tx.pay || '-'}</td>
                     <td style={{ textAlign:'right', fontFamily:'var(--fd)', fontSize:15, fontWeight:800, color: tx.type === 'income' ? 'var(--primary)' : 'var(--warn)' }}>
                       {tx.type === 'income' ? '+' : '-'}{fmt(tx.amt)}
+                    </td>
+                    <td style={{ textAlign:'right', color:'var(--accent)', fontWeight:700 }}>
+                      {tx.xp ? `+${tx.xp}` : '—'}
                     </td>
                     <td style={{ textAlign:'right' }}>
                       <button
