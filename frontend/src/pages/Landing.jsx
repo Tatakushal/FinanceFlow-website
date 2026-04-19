@@ -173,7 +173,7 @@ export default function Landing() {
           </div>
 
           <div style={{ background:'linear-gradient(135deg,rgba(0,229,160,0.05),rgba(61,127,255,0.05))', border:'1px solid rgba(255,255,255,0.08)', borderRadius:24, padding:'60px 40px', textAlign:'center' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:40 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:32 }}>
               {[{ n: 10000, label:'Active Users', suffix:'+' }, { n:50000, label:'Transactions Logged', suffix:'+' }, { n:1000000, label:'Money Saved (₹)', suffix:'+' }].map(s => (
                 <div key={s.label} className="stat-item">
                   <div className="stat-number"><AnimatedCounter target={s.n} />{s.suffix}</div>

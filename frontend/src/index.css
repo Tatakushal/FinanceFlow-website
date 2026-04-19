@@ -62,9 +62,9 @@
 
 /* Section header for stat numbers */
 .section-eyebrow{font-size:13px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;}
-.stat-number{font-family:var(--fd);font-size:clamp(32px,5vw,48px);font-weight:800;color:#fff;letter-spacing:-1px;}
+.stat-number{font-family:var(--fd);font-size:clamp(28px,3.2vw,46px);font-weight:800;color:#fff;letter-spacing:-1px;line-height:1.05;white-space:nowrap;}
 .stat-label{font-size:16px;color:var(--text-muted);margin-top:4px;}
-.stat-item{text-align:center;}
+.stat-item{text-align:center;min-width:0;}
 
 /* Feature cards, testimonials (for Landing) */
 .feature-card{background:linear-gradient(145deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:32px;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden;}
