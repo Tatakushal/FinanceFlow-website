@@ -23,7 +23,7 @@ export default function Reports() {
   const netSaved = Number(totals.saved) || 0;
   const netSavedColor = netSaved < 0 ? 'var(--red)' : netSaved === 0 ? 'var(--text-muted)' : 'var(--accent)';
   const netSavedDisplay = `${netSaved < 0 ? '-' : ''}${fmt(Math.abs(netSaved))}`;
-  const savingsRateColor = rate < 0 ? 'var(--red)' : 'var(--gold)';
+  const savingsRateColor = rate < 0 ? 'var(--red)' : rate === 0 ? 'var(--text-muted)' : 'var(--gold)';
   const healthLabel = score === null ? 'Calculate' : score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work';
   const healthMsg = score === null ? 'Add transactions to get your score' : score >= 80 ? '🏆 You\'re in the top tier of financial health!' : '💡 Keep building good habits to improve your score.';
   const healthTip = score === null

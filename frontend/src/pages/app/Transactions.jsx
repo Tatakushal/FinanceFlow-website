@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -50,6 +50,15 @@ export default function Transactions() {
     closeEditTransaction();
     showToast('✅ Transaction updated');
   }
+
+  useEffect(() => {
+    if (!editingTx) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeEditTransaction();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editingTx]);
 
   const txs = (data?.txs || [])
     .filter(t => {
@@ -162,12 +171,22 @@ export default function Transactions() {
         )}
       </div>
       {editingTx && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'grid', placeItems:'center', zIndex:90, padding:16 }}>
-          <div className="card" style={{ width:'100%', maxWidth:420 }}>
-            <div style={{ fontFamily:'var(--fd)', fontSize:20, fontWeight:800, color:'#fff', marginBottom:14 }}>Edit Transaction</div>
+        <div
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'grid', placeItems:'center', zIndex:90, padding:16 }}
+          onClick={closeEditTransaction}
+        >
+          <div
+            className="card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tx-edit-title"
+            style={{ width:'100%', maxWidth:420 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div id="tx-edit-title" style={{ fontFamily:'var(--fd)', fontSize:20, fontWeight:800, color:'#fff', marginBottom:14 }}>Edit Transaction</div>
             <div className="fw" style={{ marginBottom:12 }}>
               <label className="flbl">Name</label>
-              <input className="finput" value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
+              <input className="finput" autoFocus value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
             </div>
             <div className="fw" style={{ marginBottom:20 }}>
               <label className="flbl">Amount</label>
