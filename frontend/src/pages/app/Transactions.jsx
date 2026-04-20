@@ -12,6 +12,10 @@ export default function Transactions() {
   const [filter, setFilter] = useState('all');
   const [xpFilter, setXpFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const toTimestamp = (value) => {
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+  };
 
   function editTransaction(tx) {
     const nextName = window.prompt('Edit transaction name', String(tx?.name || ''));
@@ -31,19 +35,21 @@ export default function Transactions() {
     showToast('✅ Transaction updated');
   }
 
-  const txs = (data?.txs || []).filter(t => {
-    if (filter === 'expense' && t.type !== 'expense') return false;
-    if (filter === 'income' && t.type !== 'income') return false;
-    const txXp = Number(t?.xp || 0);
-    if (xpFilter === 'boost' && txXp < XP_BOOST_THRESHOLD) return false;
-    if (xpFilter === 'basic' && (txXp < 1 || txXp >= XP_BOOST_THRESHOLD)) return false;
-    if (xpFilter === 'none' && txXp > 0) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!String(t.name || '').toLowerCase().includes(q) && !String(t.cat || '').toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  const txs = (data?.txs || [])
+    .filter(t => {
+      if (filter === 'expense' && t.type !== 'expense') return false;
+      if (filter === 'income' && t.type !== 'income') return false;
+      const txXp = Number(t?.xp || 0);
+      if (xpFilter === 'boost' && txXp < XP_BOOST_THRESHOLD) return false;
+      if (xpFilter === 'basic' && (txXp < 1 || txXp >= XP_BOOST_THRESHOLD)) return false;
+      if (xpFilter === 'none' && txXp > 0) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!String(t.name || '').toLowerCase().includes(q) && !String(t.cat || '').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => toTimestamp(b?.date) - toTimestamp(a?.date));
 
   return (
     <AppLayout topbarActions={<Link to="/app/add" className="btn-tb-primary">+ Add Transaction</Link>}>

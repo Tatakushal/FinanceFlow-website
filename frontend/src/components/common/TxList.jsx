@@ -5,7 +5,15 @@ export default function TxList({ limit, onDelete }) {
   const { data, fmt, doDeleteTx } = useFinance();
   const { showToast } = useToast();
 
-  const txs = limit ? (data?.txs || []).slice(0, limit) : (data?.txs || []);
+  const toTimestamp = (value) => {
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+  };
+
+  const allTxs = (data?.txs || [])
+    .slice()
+    .sort((a, b) => toTimestamp(b?.date) - toTimestamp(a?.date));
+  const txs = limit ? allTxs.slice(0, limit) : allTxs;
 
   if (!txs.length) {
     return (
