@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -7,11 +7,14 @@ export default function BudgetRings({ max = 6, manage = false }) {
   const { showToast } = useToast();
   const allBudgets = data?.budgets || [];
   const budgets = allBudgets.slice(0, max);
-  const totalIncome = (data?.txs || []).reduce((sum, tx) => {
+  const totalIncome = useMemo(() => (data?.txs || []).reduce((sum, tx) => {
     if (tx?.type !== 'income') return sum;
     return sum + (Number(tx?.amt) || 0);
-  }, 0);
-  const totalBudgetLimits = allBudgets.reduce((sum, b) => sum + (Number(b?.lim) || 0), 0);
+  }, 0), [data?.txs]);
+  const totalBudgetLimits = useMemo(
+    () => allBudgets.reduce((sum, b) => sum + (Number(b?.lim) || 0), 0),
+    [allBudgets],
+  );
   const incomeScale = totalIncome > 0 && totalBudgetLimits > 0
     ? totalIncome / totalBudgetLimits
     : 1;
