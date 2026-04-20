@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -12,38 +12,69 @@ export default function Transactions() {
   const [filter, setFilter] = useState('all');
   const [xpFilter, setXpFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [editingTx, setEditingTx] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', amt: '' });
+  const toTimestamp = (value) => {
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+  };
 
-  function editTransaction(tx) {
-    const nextName = window.prompt('Edit transaction name', String(tx?.name || ''));
-    if (nextName === null) return;
-    const nextAmountRaw = window.prompt('Edit amount', String(Number(tx?.amt) || ''));
-    if (nextAmountRaw === null) return;
-    const nextAmount = Number(nextAmountRaw);
+  function openEditTransaction(tx) {
+    setEditingTx(tx);
+    setEditForm({
+      name: String(tx?.name || ''),
+      amt: String(Number(tx?.amt) || ''),
+    });
+  }
+
+  const closeEditTransaction = useCallback(() => {
+    setEditingTx(null);
+    setEditForm({ name: '', amt: '' });
+  }, []);
+
+  const saveEditedTransaction = useCallback(() => {
+    if (!editingTx) return;
+    const nextAmount = Number(editForm.amt);
     if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
       showToast('⚠️ Enter a valid amount');
       return;
     }
-    const updated = doUpdateTx(tx.id, { name: nextName.trim() || tx.cat, amt: nextAmount });
+    const updated = doUpdateTx(editingTx.id, {
+      name: editForm.name.trim() || editingTx.cat,
+      amt: nextAmount,
+    });
     if (!updated) {
       showToast('⚠️ Unable to update transaction');
       return;
     }
+    closeEditTransaction();
     showToast('✅ Transaction updated');
-  }
+  }, [closeEditTransaction, doUpdateTx, editForm.amt, editForm.name, editingTx, showToast]);
 
-  const txs = (data?.txs || []).filter(t => {
-    if (filter === 'expense' && t.type !== 'expense') return false;
-    if (filter === 'income' && t.type !== 'income') return false;
-    const txXp = Number(t?.xp || 0);
-    if (xpFilter === 'boost' && txXp < XP_BOOST_THRESHOLD) return false;
-    if (xpFilter === 'basic' && (txXp < 1 || txXp >= XP_BOOST_THRESHOLD)) return false;
-    if (xpFilter === 'none' && txXp > 0) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!String(t.name || '').toLowerCase().includes(q) && !String(t.cat || '').toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  useEffect(() => {
+    if (!editingTx) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeEditTransaction();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editingTx, closeEditTransaction]);
+
+  const txs = (data?.txs || [])
+    .filter(t => {
+      if (filter === 'expense' && t.type !== 'expense') return false;
+      if (filter === 'income' && t.type !== 'income') return false;
+      const txXp = Number(t?.xp || 0);
+      if (xpFilter === 'boost' && txXp < XP_BOOST_THRESHOLD) return false;
+      if (xpFilter === 'basic' && (txXp < 1 || txXp >= XP_BOOST_THRESHOLD)) return false;
+      if (xpFilter === 'none' && txXp > 0) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!String(t.name || '').toLowerCase().includes(q) && !String(t.cat || '').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => toTimestamp(b?.date) - toTimestamp(a?.date));
 
   return (
     <AppLayout topbarActions={<Link to="/app/add" className="btn-tb-primary">+ Add Transaction</Link>}>
@@ -124,7 +155,7 @@ export default function Transactions() {
                       <button
                         className="btn btn-s"
                         style={{ padding:'4px 10px', fontSize:11, marginRight:6 }}
-                        onClick={() => editTransaction(tx)}
+                        onClick={() => openEditTransaction(tx)}
                       >✎</button>
                       <button
                         className="btn btn-s"
@@ -139,6 +170,43 @@ export default function Transactions() {
           </div>
         )}
       </div>
+      {editingTx && (
+        <div
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'grid', placeItems:'center', zIndex:90, padding:16 }}
+          role="presentation"
+          onClick={closeEditTransaction}
+        >
+          <div
+            className="card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tx-edit-title"
+            style={{ width:'100%', maxWidth:420 }}
+            onClick={e => e.stopPropagation()}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                saveEditedTransaction();
+              }
+            }}
+          >
+            <div id="tx-edit-title" style={{ fontFamily:'var(--fd)', fontSize:20, fontWeight:800, color:'#fff', marginBottom:14 }}>Edit Transaction</div>
+            <div className="fw" style={{ marginBottom:12 }}>
+              <label className="flbl" htmlFor="tx-name">Name</label>
+              <input id="tx-name" className="finput" autoFocus aria-describedby="tx-name-help" value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
+              <div id="tx-name-help" style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 12 }}>Leave blank to use the category name.</div>
+            </div>
+            <div className="fw" style={{ marginBottom:20 }}>
+              <label className="flbl" htmlFor="tx-amt">Amount</label>
+              <input id="tx-amt" className="finput" type="number" min="0" step="0.01" value={editForm.amt} onChange={e => setEditForm(v => ({ ...v, amt: e.target.value }))} />
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
+              <button className="btn btn-s" onClick={closeEditTransaction}>Cancel</button>
+              <button className="btn btn-p btn-s" onClick={saveEditedTransaction}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

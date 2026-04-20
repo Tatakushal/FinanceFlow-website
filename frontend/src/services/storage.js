@@ -58,6 +58,9 @@ export function freshData(name, email, income = 0) {
 export function ensureDataShape(d) {
   if (!d || typeof d !== 'object') return null;
   if (!Array.isArray(d.txs)) d.txs = [];
+  d.txs = d.txs
+    .filter(tx => tx && typeof tx === 'object')
+    .map(tx => ({ ...tx, recurring: normalizeRecurring(tx.recurring) }));
   if (!Array.isArray(d.budgets)) d.budgets = [];
   if (!Array.isArray(d.goals)) d.goals = [];
   if (!Array.isArray(d.subscriptions)) d.subscriptions = [];
@@ -247,7 +250,7 @@ export function addTx(email, tx) {
   if (!d) return;
   const hasDate = tx?.date !== null && tx?.date !== undefined;
   const dateLabel = hasDate ? formatDateLabel(tx.date) : formatDateLabel(new Date());
-  const newTx = { ...tx, id: Date.now(), date: dateLabel };
+  const newTx = { ...tx, id: Date.now(), date: dateLabel, recurring: normalizeRecurring(tx?.recurring) };
   const awardedXp = calculateTransactionXP(d, newTx);
   if (awardedXp > 0) {
     newTx.xp = awardedXp;
@@ -307,6 +310,9 @@ export function updateTx(email, txId, updates = {}) {
   if (updates?.date !== undefined) {
     next.date = formatDateLabel(updates.date);
   }
+  if (updates?.recurring !== undefined) {
+    next.recurring = normalizeRecurring(updates.recurring);
+  }
 
   if (prev?.type === 'expense') {
     const prevBudget = d.budgets.find(b => b.cat === prev.cat);
@@ -362,6 +368,15 @@ function calculateTransactionXP(data, tx) {
 
 function formatDateLabel(value) {
   return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function normalizeRecurring(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized || normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') return false;
+  if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true;
+  return Boolean(value);
 }
 
 function applyXp(data, amount, reason = 'Activity') {

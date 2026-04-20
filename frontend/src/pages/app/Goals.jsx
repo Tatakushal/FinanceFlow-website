@@ -14,6 +14,8 @@ export default function Goals() {
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name:'', emoji:'🎯', target:'', saved:'0' });
+  const [savingsGoal, setSavingsGoal] = useState(null);
+  const [savingsAmount, setSavingsAmount] = useState('');
 
   const goals = data?.goals || [];
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
@@ -35,20 +37,34 @@ export default function Goals() {
     showToast('Goal removed');
   }
 
-  function addSavings(id) {
-    const amt = parseFloat(prompt('How much have you saved towards this goal?') || '0');
-    if (!amt || isNaN(amt)) return;
-    const goal = goals.find(g => g.id === id);
+  function openSavingsForm(goal) {
+    setSavingsGoal(goal);
+    setSavingsAmount('');
+  }
+
+  function closeSavingsForm() {
+    setSavingsGoal(null);
+    setSavingsAmount('');
+  }
+
+  function addSavings() {
+    const amt = parseFloat(savingsAmount || '0');
+    if (!amt || isNaN(amt) || amt <= 0) {
+      showToast('⚠️ Enter a valid savings amount');
+      return;
+    }
+    const goal = goals.find(g => g.id === savingsGoal?.id);
     if (!goal) return;
     const wasComplete = goal.saved >= goal.target;
-    const updated = { ...data, goals: goals.map(g => g.id === id ? { ...g, saved: Math.min(g.saved + amt, g.target) } : g) };
+    const updated = { ...data, goals: goals.map(g => g.id === goal.id ? { ...g, saved: Math.min(g.saved + amt, g.target) } : g) };
     save(updated);
-    const refreshedGoal = updated.goals.find(g => g.id === id);
+    const refreshedGoal = updated.goals.find(g => g.id === goal.id);
     const isNowComplete = refreshedGoal && refreshedGoal.saved >= refreshedGoal.target;
     let gained = doAwardXp(calculateSavingsXp(amt), `Saved toward goal: ${goal.name}`);
     if (!wasComplete && isNowComplete) {
       gained += doAwardXp(GOAL_COMPLETION_XP, `Goal completed: ${goal.name}`);
     }
+    closeSavingsForm();
     showToast(`Added ${fmt(amt)} to goal${gained ? ` • +${gained} XP` : ''}!`);
   }
 
@@ -109,12 +125,46 @@ export default function Goals() {
                   <span>{fmt(g.target)} goal</span>
                 </div>
                 <div style={{ display:'flex', gap:8, marginTop:12 }}>
-                  <button className="btn btn-s" style={{ flex:1, fontSize:12 }} onClick={() => addSavings(g.id)}>+ Add savings</button>
+                  <button className="btn btn-s" style={{ flex:1, fontSize:12 }} onClick={() => openSavingsForm(g)}>+ Add savings</button>
                   <button className="btn btn-s" style={{ fontSize:12, color:'var(--warn)' }} onClick={() => deleteGoal(g.id)}>Remove</button>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+      {savingsGoal && (
+        <div
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'grid', placeItems:'center', zIndex:90, padding:16 }}
+          role="presentation"
+          onClick={closeSavingsForm}
+        >
+          <div className="card" style={{ width:'100%', maxWidth:420 }} role="dialog" aria-modal="true" aria-labelledby="goal-savings-title" onClick={e => e.stopPropagation()}>
+            <div id="goal-savings-title" style={{ fontFamily:'var(--fd)', fontSize:20, fontWeight:800, color:'#fff', marginBottom:14 }}>
+              Add Savings to {savingsGoal.name}
+            </div>
+            <div className="fw" style={{ marginBottom:20 }}>
+              <label className="flbl" htmlFor="goal-savings-amount">Amount</label>
+              <input
+                id="goal-savings-amount"
+                className="finput"
+                type="number"
+                min="0"
+                step="0.01"
+                autoFocus
+                value={savingsAmount}
+                onChange={e => setSavingsAmount(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') addSavings();
+                  if (e.key === 'Escape') closeSavingsForm();
+                }}
+              />
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
+              <button className="btn btn-s" onClick={closeSavingsForm}>Cancel</button>
+              <button className="btn btn-p btn-s" onClick={addSavings}>Save</button>
+            </div>
+          </div>
         </div>
       )}
     </AppLayout>

@@ -20,6 +20,10 @@ export default function Reports() {
     : null;
 
   const score = s1 !== null ? Math.round((s1 + s2 + (s3 ?? DEFAULT_GOAL_SCORE_OUT_OF_TEN)) / 3 * 10) : null;
+  const netSaved = Number(totals.saved) || 0;
+  const netSavedColor = netSaved < 0 ? 'var(--red)' : netSaved === 0 ? 'var(--text-muted)' : 'var(--accent)';
+  const netSavedDisplay = `${netSaved < 0 ? '-' : ''}${fmt(Math.abs(netSaved))}`;
+  const savingsRateColor = rate < 0 ? 'var(--red)' : rate === 0 ? 'var(--text-muted)' : 'var(--gold)';
   const healthLabel = score === null ? 'Calculate' : score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work';
   const healthMsg = score === null ? 'Add transactions to get your score' : score >= 80 ? '🏆 You\'re in the top tier of financial health!' : '💡 Keep building good habits to improve your score.';
   const healthTip = score === null
@@ -77,11 +81,11 @@ export default function Reports() {
         </div>
         <div className="card-sm" style={{ textAlign:'center' }}>
           <div style={{ fontSize:12, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.7px', marginBottom:6 }}>Net Saved</div>
-          <div style={{ fontFamily:'var(--fd)', fontSize:28, fontWeight:800, color:'var(--accent)' }}>{fmt(totals.saved)}</div>
+          <div style={{ fontFamily:'var(--fd)', fontSize:28, fontWeight:800, color:netSavedColor }}>{netSavedDisplay}</div>
         </div>
         <div className="card-sm" style={{ textAlign:'center' }}>
           <div style={{ fontSize:12, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.7px', marginBottom:6 }}>Savings Rate</div>
-          <div style={{ fontFamily:'var(--fd)', fontSize:28, fontWeight:800, color:'var(--gold)' }}>{totals.rate}%</div>
+          <div style={{ fontFamily:'var(--fd)', fontSize:28, fontWeight:800, color:savingsRateColor }}>{totals.rate}%</div>
         </div>
       </div>
 
@@ -161,8 +165,8 @@ export default function Reports() {
               return (
                 <div key={label} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                   <div style={{ display:'flex', gap:4, alignItems:'flex-end', height:130 }}>
-                    <div title={`Income: ${fmt(v.income)}`} style={{ width:14, height:Math.max(incH, 2), background:'var(--primary)', borderRadius:'4px 4px 0 0', transition:'height .5s' }} />
-                    <div title={`Expense: ${fmt(v.expense)}`} style={{ width:14, height:Math.max(expH, 2), background:'var(--warn)', borderRadius:'4px 4px 0 0', transition:'height .5s' }} />
+                    <div title={`Income: ${fmt(v.income)}`} style={{ width:14, height:Math.max(incH, 0), background:'var(--primary)', borderRadius:'4px 4px 0 0', transition:'height .5s' }} />
+                    <div title={`Expense: ${fmt(v.expense)}`} style={{ width:14, height:Math.max(expH, 0), background:'var(--warn)', borderRadius:'4px 4px 0 0', transition:'height .5s' }} />
                   </div>
                   <div style={{ fontSize:10, color:'var(--text-muted)', textAlign:'center' }}>{label}</div>
                 </div>
