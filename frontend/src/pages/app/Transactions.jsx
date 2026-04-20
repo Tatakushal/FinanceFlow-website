@@ -182,15 +182,21 @@ export default function Transactions() {
             aria-labelledby="tx-edit-title"
             style={{ width:'100%', maxWidth:420 }}
             onClick={e => e.stopPropagation()}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                saveEditedTransaction();
+              }
+            }}
           >
             <div id="tx-edit-title" style={{ fontFamily:'var(--fd)', fontSize:20, fontWeight:800, color:'#fff', marginBottom:14 }}>Edit Transaction</div>
             <div className="fw" style={{ marginBottom:12 }}>
-              <label className="flbl">Name</label>
-              <input className="finput" autoFocus value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
+              <label className="flbl" htmlFor="tx-name">Name</label>
+              <input id="tx-name" className="finput" autoFocus value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
             </div>
             <div className="fw" style={{ marginBottom:20 }}>
-              <label className="flbl">Amount</label>
-              <input className="finput" type="number" min="0" step="0.01" value={editForm.amt} onChange={e => setEditForm(v => ({ ...v, amt: e.target.value }))} />
+              <label className="flbl" htmlFor="tx-amt">Amount</label>
+              <input id="tx-amt" className="finput" type="number" min="0" step="0.01" value={editForm.amt} onChange={e => setEditForm(v => ({ ...v, amt: e.target.value }))} />
             </div>
             <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
               <button className="btn btn-s" onClick={closeEditTransaction}>Cancel</button>
