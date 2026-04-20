@@ -414,7 +414,10 @@ export function sendFriendRequest(fromEmail, toEmailRaw) {
   ensureDataShape(targetAccount);
 
   if (fromData.social.friends.some(f => normalizeEmail(f.email) === to)) throw new Error('Already connected.');
+  if (targetAccount.social.friends.some(f => normalizeEmail(f.email) === from)) throw new Error('Already connected.');
   if (fromData.social.outgoingRequests.some(f => normalizeEmail(f.email) === to)) throw new Error('Request already sent.');
+  if (targetAccount.social.incomingRequests.some(f => normalizeEmail(f.email) === from)) throw new Error('Request already sent.');
+  if (targetAccount.social.outgoingRequests.some(f => normalizeEmail(f.email) === from)) throw new Error('This user has already requested you.');
   if (fromData.social.incomingRequests.some(f => normalizeEmail(f.email) === to)) throw new Error('This user has already requested you.');
 
   const fromLite = userLiteByEmail(from);

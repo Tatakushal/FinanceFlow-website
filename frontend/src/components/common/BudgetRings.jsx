@@ -13,7 +13,7 @@ export default function BudgetRings({ max = 6, manage = false }) {
   }, 0);
   const totalBudgetLimits = allBudgets.reduce((sum, b) => sum + (Number(b?.lim) || 0), 0);
   const incomeScale = totalIncome > 0 && totalBudgetLimits > 0
-    ? Math.min(1, totalIncome / totalBudgetLimits)
+    ? totalIncome / totalBudgetLimits
     : 1;
   const [editingCat, setEditingCat] = useState(null);
   const [showForm, setShowForm] = useState(false);

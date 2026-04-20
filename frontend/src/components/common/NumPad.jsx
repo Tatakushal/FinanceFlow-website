@@ -20,12 +20,14 @@ export default function NumPad({ value, onChange, accentColor }) {
   }
 
   const keys = ['1','2','3','4','5','6','7','8','9','.','0','⌫'];
+  const amountLength = String(value || '0').length;
+  const amountSizeClass = amountLength >= 8 ? ' long' : amountLength >= 6 ? ' mid' : '';
 
   return (
     <div className="numpad-section">
       <div className="amt-display">
         <span className="amt-cur" style={{ color: accent }}>₹</span>
-        <span className="amt-val" style={{ color: accent }}>{value || '0'}</span>
+        <span className={`amt-val${amountSizeClass}`} style={{ color: accent }}>{value || '0'}</span>
       </div>
       <div className="numpad">
         {keys.map(k => (

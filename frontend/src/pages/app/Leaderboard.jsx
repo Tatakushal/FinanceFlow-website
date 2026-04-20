@@ -7,6 +7,7 @@ export default function Leaderboard() {
   const { data, leaderboard, doSendFriendRequest, doAcceptFriendRequest, doRejectFriendRequest } = useFinance();
   const { showToast } = useToast();
   const [email, setEmail] = useState('');
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const incoming = data?.social?.incomingRequests || [];
   const outgoing = data?.social?.outgoingRequests || [];
@@ -14,6 +15,7 @@ export default function Leaderboard() {
   function sendRequest() {
     const target = email.trim().toLowerCase();
     if (!target) { showToast('⚠️ Enter a friend email'); return; }
+    if (!emailPattern.test(target)) { showToast('⚠️ Enter a valid email address'); return; }
     try {
       doSendFriendRequest(target);
       setEmail('');
