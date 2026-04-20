@@ -12,26 +12,42 @@ export default function Transactions() {
   const [filter, setFilter] = useState('all');
   const [xpFilter, setXpFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [editingTx, setEditingTx] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', amt: '' });
   const toTimestamp = (value) => {
     const ts = new Date(value).getTime();
     return Number.isFinite(ts) ? ts : 0;
   };
 
-  function editTransaction(tx) {
-    const nextName = window.prompt('Edit transaction name', String(tx?.name || ''));
-    if (nextName === null) return;
-    const nextAmountRaw = window.prompt('Edit amount', String(Number(tx?.amt) || ''));
-    if (nextAmountRaw === null) return;
-    const nextAmount = Number(nextAmountRaw);
+  function openEditTransaction(tx) {
+    setEditingTx(tx);
+    setEditForm({
+      name: String(tx?.name || ''),
+      amt: String(Number(tx?.amt) || ''),
+    });
+  }
+
+  function closeEditTransaction() {
+    setEditingTx(null);
+    setEditForm({ name: '', amt: '' });
+  }
+
+  function saveEditedTransaction() {
+    if (!editingTx) return;
+    const nextAmount = Number(editForm.amt);
     if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
       showToast('⚠️ Enter a valid amount');
       return;
     }
-    const updated = doUpdateTx(tx.id, { name: nextName.trim() || tx.cat, amt: nextAmount });
+    const updated = doUpdateTx(editingTx.id, {
+      name: editForm.name.trim() || editingTx.cat,
+      amt: nextAmount,
+    });
     if (!updated) {
       showToast('⚠️ Unable to update transaction');
       return;
     }
+    closeEditTransaction();
     showToast('✅ Transaction updated');
   }
 
@@ -130,7 +146,7 @@ export default function Transactions() {
                       <button
                         className="btn btn-s"
                         style={{ padding:'4px 10px', fontSize:11, marginRight:6 }}
-                        onClick={() => editTransaction(tx)}
+                        onClick={() => openEditTransaction(tx)}
                       >✎</button>
                       <button
                         className="btn btn-s"
@@ -145,6 +161,25 @@ export default function Transactions() {
           </div>
         )}
       </div>
+      {editingTx && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'grid', placeItems:'center', zIndex:90, padding:16 }}>
+          <div className="card" style={{ width:'100%', maxWidth:420 }}>
+            <div style={{ fontFamily:'var(--fd)', fontSize:20, fontWeight:800, color:'#fff', marginBottom:14 }}>Edit Transaction</div>
+            <div className="fw" style={{ marginBottom:12 }}>
+              <label className="flbl">Name</label>
+              <input className="finput" value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
+            </div>
+            <div className="fw" style={{ marginBottom:20 }}>
+              <label className="flbl">Amount</label>
+              <input className="finput" type="number" min="0" step="0.01" value={editForm.amt} onChange={e => setEditForm(v => ({ ...v, amt: e.target.value }))} />
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
+              <button className="btn btn-s" onClick={closeEditTransaction}>Cancel</button>
+              <button className="btn btn-p btn-s" onClick={saveEditedTransaction}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
