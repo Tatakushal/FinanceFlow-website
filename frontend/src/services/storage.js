@@ -287,6 +287,41 @@ export function deleteTx(email, txId) {
   saveData(email, d);
 }
 
+export function updateTx(email, txId, updates = {}) {
+  const d = getData(email);
+  if (!d) return null;
+  const idx = d.txs.findIndex(t => t.id === txId);
+  if (idx < 0) return null;
+
+  const prev = d.txs[idx];
+  const next = {
+    ...prev,
+    ...updates,
+    id: prev.id,
+  };
+
+  const nextAmount = Number(next?.amt);
+  if (!Number.isFinite(nextAmount) || nextAmount <= 0) return null;
+  next.amt = nextAmount;
+
+  if (updates?.date !== undefined) {
+    next.date = formatDateLabel(updates.date);
+  }
+
+  if (prev?.type === 'expense') {
+    const prevBudget = d.budgets.find(b => b.cat === prev.cat);
+    if (prevBudget) prevBudget.spent = Math.max(0, Number(prevBudget.spent || 0) - Number(prev.amt || 0));
+  }
+  if (next?.type === 'expense') {
+    const nextBudget = d.budgets.find(b => b.cat === next.cat);
+    if (nextBudget) nextBudget.spent = Number(nextBudget.spent || 0) + Number(next.amt || 0);
+  }
+
+  d.txs[idx] = next;
+  saveData(email, d);
+  return next;
+}
+
 export function getNetWorth(email) {
   const d = getData(email);
   if (!d) return { assets: 0, liabilities: 0, net: 0 };

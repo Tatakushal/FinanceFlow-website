@@ -10,7 +10,9 @@ export default function HealthScore() {
   const goals = data?.goals || [];
   const hasTxData = totals.income > 0;
 
-  const s1 = hasTxData ? Math.min(10, Math.round(rate / 10)) : null;
+  const s1 = hasTxData ? Math.max(0, Math.min(10, Math.round(rate / 10))) : null;
+  const savingsRateBarColor = rate < 0 ? 'var(--red)' : 'var(--primary)';
+  const savingsRateValueColor = rate < 0 ? 'var(--red)' : savingsRateBarColor;
   const overBudgets = budgets.filter(b => b.spent > b.lim).length;
   const s2 = Math.max(0, 10 - overBudgets * 2);
   const s3 = goals.length > 0
@@ -68,14 +70,14 @@ export default function HealthScore() {
           <div style={{ fontFamily:'var(--fd)', fontSize:16, fontWeight:800, color:'#fff', marginBottom:16 }}>Score Breakdown</div>
 
           {[
-            { label:'💰 Savings Rate', score:s1, bar:'var(--primary)', tip:`Savings rate: ${rate}%` },
+            { label:'💰 Savings Rate', score:s1, bar:savingsRateBarColor, valueColor:savingsRateValueColor, tip:`Savings rate: ${rate}%` },
             { label:'🎯 Budget Adherence', score:s2, bar:'var(--gold)', tip: overBudgets > 0 ? `${overBudgets} budget(s) exceeded` : 'All budgets on track ✓' },
             { label:'🚀 Goal Progress', score:s3, bar:'var(--accent)', tip: s3 !== null ? `${goals.length} goal(s) tracked` : 'Set goals to improve this score' },
           ].map(item => (
             <div key={item.label} className="card" style={{ marginBottom:12 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
                 <span style={{ fontSize:14, color:'var(--text)' }}>{item.label}</span>
-                <span style={{ fontSize:16, fontWeight:800, color:item.bar }}>{item.score !== null ? `${item.score}/10` : '—'}</span>
+                <span style={{ fontSize:16, fontWeight:800, color:item.valueColor || item.bar }}>{item.score !== null ? `${item.score}/10` : '—'}</span>
               </div>
               <div className="pbar">
                 <div className="pfill" style={{ background:item.bar, width:`${(item.score ?? 0) * 10}%`, transition:'width 0.6s ease' }} />

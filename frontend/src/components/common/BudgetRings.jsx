@@ -5,7 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 export default function BudgetRings({ max = 6, manage = false }) {
   const { data, fmt, save } = useFinance();
   const { showToast } = useToast();
-  const allBudgets = data?.budgets || [];
+  const allBudgets = useMemo(() => data?.budgets || [], [data?.budgets]);
   const budgets = allBudgets.slice(0, max);
   const totalIncome = useMemo(() => (data?.txs || []).reduce((sum, tx) => {
     if (tx?.type !== 'income') return sum;

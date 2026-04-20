@@ -1,15 +1,35 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinance } from '../../contexts/FinanceContext';
+import { useToast } from '../../contexts/ToastContext';
 import AppLayout from '../../components/layout/AppLayout';
 
 const XP_BOOST_THRESHOLD = 25;
 
 export default function Transactions() {
-  const { data, fmt, doDeleteTx } = useFinance();
+  const { data, fmt, doDeleteTx, doUpdateTx } = useFinance();
+  const { showToast } = useToast();
   const [filter, setFilter] = useState('all');
   const [xpFilter, setXpFilter] = useState('all');
   const [search, setSearch] = useState('');
+
+  function editTransaction(tx) {
+    const nextName = window.prompt('Edit transaction name', String(tx?.name || ''));
+    if (nextName === null) return;
+    const nextAmountRaw = window.prompt('Edit amount', String(Number(tx?.amt) || ''));
+    if (nextAmountRaw === null) return;
+    const nextAmount = Number(nextAmountRaw);
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
+      showToast('⚠️ Enter a valid amount');
+      return;
+    }
+    const updated = doUpdateTx(tx.id, { name: nextName.trim() || tx.cat, amt: nextAmount });
+    if (!updated) {
+      showToast('⚠️ Unable to update transaction');
+      return;
+    }
+    showToast('✅ Transaction updated');
+  }
 
   const txs = (data?.txs || []).filter(t => {
     if (filter === 'expense' && t.type !== 'expense') return false;
@@ -100,7 +120,12 @@ export default function Transactions() {
                     <td style={{ textAlign:'right', color:'var(--accent)', fontWeight:700 }}>
                       {tx.xp ? `+${tx.xp}` : '—'}
                     </td>
-                    <td style={{ textAlign:'right' }}>
+                    <td style={{ textAlign:'right', whiteSpace:'nowrap' }}>
+                      <button
+                        className="btn btn-s"
+                        style={{ padding:'4px 10px', fontSize:11, marginRight:6 }}
+                        onClick={() => editTransaction(tx)}
+                      >✎</button>
                       <button
                         className="btn btn-s"
                         style={{ padding:'4px 10px', fontSize:11 }}
