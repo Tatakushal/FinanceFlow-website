@@ -5,11 +5,26 @@ import AppLayout from '../../components/layout/AppLayout';
 import BudgetRings from '../../components/common/BudgetRings';
 import TxList from '../../components/common/TxList';
 
+const SAVINGS_RATE_RED_THRESHOLD = 10;
+const SAVINGS_RATE_ORANGE_THRESHOLD = 20;
+
 export default function Dashboard() {
   const { user } = useAuth();
   const { totals, fmt, gamification } = useFinance();
 
   const firstName = user?.name?.split(' ')[0] || 'there';
+  const savingsRate = Number.parseFloat(totals.rate || 0);
+  const isNegativeSavingsRate = savingsRate < 0;
+  const balance = Number(totals.saved) || 0;
+  const balanceColor = balance < 0 ? 'var(--red)' : balance === 0 ? 'var(--text-muted)' : 'var(--accent)';
+  const balanceDisplay = `${balance < 0 ? '-' : ''}${fmt(Math.abs(balance))}`;
+  const savingsRateColor = totals.income <= 0
+    ? 'var(--text-muted)'
+    : savingsRate < SAVINGS_RATE_RED_THRESHOLD
+      ? 'var(--red)'
+      : savingsRate < SAVINGS_RATE_ORANGE_THRESHOLD
+        ? 'var(--warn)'
+        : 'var(--primary)';
 
   return (
     <AppLayout
@@ -23,10 +38,10 @@ export default function Dashboard() {
       {/* Balance Hero */}
       <div className="balance-hero">
         <div className="balance-label">Total Balance</div>
-        <div className="balance-amount">{fmt(Math.max(0, totals.saved || 0))}</div>
-        <div className="balance-growth">
+        <div className="balance-amount" style={{ color: balanceColor }}>{balanceDisplay}</div>
+        <div className="balance-growth" style={{ color: savingsRateColor }}>
           {totals.income > 0
-            ? `↑ Saving ${totals.rate}% of income this month`
+            ? `${isNegativeSavingsRate ? '↓' : '↑'} Saving ${totals.rate}% of income this month`
             : 'Start adding transactions to see insights'}
         </div>
         <div className="balance-cols">
@@ -40,7 +55,7 @@ export default function Dashboard() {
           </div>
           <div className="balance-col">
             <div className="balance-col-label">Balance</div>
-            <div className="balance-col-value" style={{ color:'var(--accent)' }}>{fmt(totals.saved)}</div>
+            <div className="balance-col-value" style={{ color: balanceColor }}>{balanceDisplay}</div>
           </div>
         </div>
       </div>

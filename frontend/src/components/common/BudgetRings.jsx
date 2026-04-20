@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useToast } from '../../contexts/ToastContext';
 
 export default function BudgetRings({ max = 6, manage = false }) {
   const { data, fmt, save } = useFinance();
   const { showToast } = useToast();
-  const allBudgets = data?.budgets || [];
+  const allBudgets = useMemo(() => data?.budgets || [], [data?.budgets]);
   const budgets = allBudgets.slice(0, max);
+  const totalIncome = useMemo(() => (data?.txs || []).reduce((sum, tx) => {
+    if (tx?.type !== 'income') return sum;
+    return sum + (Number(tx?.amt) || 0);
+  }, 0), [data?.txs]);
+  const totalBudgetLimits = useMemo(
+    () => allBudgets.reduce((sum, b) => sum + (Number(b?.lim) || 0), 0),
+    [allBudgets],
+  );
+  const incomeScale = totalIncome > 0 && totalBudgetLimits > 0
+    ? totalIncome / totalBudgetLimits
+    : 1;
   const [editingCat, setEditingCat] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ cat: '', ico: '💰', lim: '', clr: '#3D7FFF' });
@@ -112,11 +123,14 @@ export default function BudgetRings({ max = 6, manage = false }) {
 
       <div className="rings-grid">
         {budgets.map((b) => {
-          const pct = b.lim > 0 ? Math.min(b.spent / b.lim * 100, 100) : 0;
+          const rawLimit = Number(b?.lim) || 0;
+          const incomeAdjustedLimit = totalIncome > 0 ? rawLimit * incomeScale : rawLimit;
+          const effectiveLimit = incomeAdjustedLimit > 0 ? incomeAdjustedLimit : rawLimit;
+          const pct = effectiveLimit > 0 ? Math.min((Number(b?.spent) || 0) / effectiveLimit * 100, 100) : 0;
           const r = 36;
           const circ = 2 * Math.PI * r;
           const dash = (pct / 100) * circ;
-          const over = b.spent > b.lim;
+          const over = (Number(b?.spent) || 0) > effectiveLimit;
           const color = over ? 'var(--warn)' : b.clr || 'var(--primary)';
 
           return (
@@ -138,7 +152,7 @@ export default function BudgetRings({ max = 6, manage = false }) {
               <div style={{ fontSize: 16, marginBottom: 4 }}>{decodeIcon(b.ico)}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{b.cat}</div>
               <div style={{ fontSize: 11, color: over ? 'var(--warn)' : 'var(--text-dim)' }}>
-                {fmt(b.spent)} / {fmt(b.lim)}
+                {fmt(Number(b?.spent) || 0)} / {fmt(effectiveLimit)}
               </div>
               {manage ? (
                 <div className="budget-rings-item-actions">

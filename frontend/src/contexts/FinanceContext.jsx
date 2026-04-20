@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import {
-  getData, saveData, addTx, deleteTx, getTotals, getNetWorth, fmtCurrency,
+  getData, saveData, addTx, updateTx, deleteTx, getTotals, getNetWorth, fmtCurrency,
   getUserGamification, getFriendsLeaderboard, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, awardXp,
 } from '../services/storage';
 import { saveUserData } from '../services/firestore';
@@ -45,6 +45,14 @@ export function FinanceProvider({ children }) {
     deleteTx(user.email, txId);
     if (user.uid) saveUserData(user.uid, getData(user.email)).catch(() => {});
     refresh();
+  }, [user, refresh]);
+
+  const doUpdateTx = useCallback((txId, updates) => {
+    if (!user?.email) return null;
+    const updatedTx = updateTx(user.email, txId, updates);
+    if (user.uid) saveUserData(user.uid, getData(user.email)).catch(() => {});
+    refresh();
+    return updatedTx;
   }, [user, refresh]);
 
   const totals = useMemo(() => {
@@ -101,10 +109,10 @@ export function FinanceProvider({ children }) {
   }, [user, refresh]);
 
   const value = useMemo(() => ({
-    data, save, refresh, totals, netWorth, fmt, doAddTx, doDeleteTx,
+    data, save, refresh, totals, netWorth, fmt, doAddTx, doDeleteTx, doUpdateTx,
     gamification, leaderboard, doSendFriendRequest, doAcceptFriendRequest, doRejectFriendRequest, doAwardXp,
   }), [
-    data, save, refresh, totals, netWorth, fmt, doAddTx, doDeleteTx,
+    data, save, refresh, totals, netWorth, fmt, doAddTx, doDeleteTx, doUpdateTx,
     gamification, leaderboard, doSendFriendRequest, doAcceptFriendRequest, doRejectFriendRequest, doAwardXp,
   ]);
 

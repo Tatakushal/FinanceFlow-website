@@ -49,6 +49,7 @@ export default function AddTransaction() {
       date,
       pay: type === 'expense' ? pay : 'Bank',
       clr: type === 'expense' ? '#FF6B35' : '#00E5A0',
+      recurring,
     });
     const xpLine = addedTx?.xp ? ` • +${addedTx.xp} XP` : '';
     showToast(`✅ ${fmt(v)} ${type === 'expense' ? 'expense' : 'income'} added to ${cat.n}${xpLine}`);
@@ -129,18 +130,18 @@ export default function AddTransaction() {
                 <input className="finput" type="date" value={date} onChange={e => setDate(e.target.value)} />
               </div>
             )}
-            {type === 'expense' && (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:12, background:'var(--surface3)', borderRadius:10, marginBottom:16 }}>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:600, color:'#fff' }}>🔁 Recurring</div>
-                  <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>Repeat monthly (EMI / subscription)</div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:12, background:'var(--surface3)', borderRadius:10, marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600, color:'#fff' }}>🔁 Recurring</div>
+                <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>
+                  {type === 'income' ? 'Repeat monthly income (salary / rent)' : 'Repeat monthly (EMI / subscription)'}
                 </div>
-                <button
-                  className={`tog${recurring ? ' on' : ' off'}`}
-                  onClick={() => setRecurring(r => !r)}
-                />
               </div>
-            )}
+              <button
+                className={`tog${recurring ? ' on' : ' off'}`}
+                onClick={() => setRecurring(r => !r)}
+              />
+            </div>
             <button
               className="btn btn-p btn-full"
               onClick={handleAdd}
