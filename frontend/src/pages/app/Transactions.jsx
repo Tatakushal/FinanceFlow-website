@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -27,12 +27,12 @@ export default function Transactions() {
     });
   }
 
-  function closeEditTransaction() {
+  const closeEditTransaction = useCallback(() => {
     setEditingTx(null);
     setEditForm({ name: '', amt: '' });
-  }
+  }, []);
 
-  function saveEditedTransaction() {
+  const saveEditedTransaction = useCallback(() => {
     if (!editingTx) return;
     const nextAmount = Number(editForm.amt);
     if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
@@ -49,7 +49,7 @@ export default function Transactions() {
     }
     closeEditTransaction();
     showToast('✅ Transaction updated');
-  }
+  }, [closeEditTransaction, doUpdateTx, editForm.amt, editForm.name, editingTx, showToast]);
 
   useEffect(() => {
     if (!editingTx) return undefined;
@@ -58,7 +58,7 @@ export default function Transactions() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editingTx]);
+  }, [editingTx, closeEditTransaction]);
 
   const txs = (data?.txs || [])
     .filter(t => {
@@ -173,6 +173,7 @@ export default function Transactions() {
       {editingTx && (
         <div
           style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'grid', placeItems:'center', zIndex:90, padding:16 }}
+          role="presentation"
           onClick={closeEditTransaction}
         >
           <div
@@ -192,7 +193,8 @@ export default function Transactions() {
             <div id="tx-edit-title" style={{ fontFamily:'var(--fd)', fontSize:20, fontWeight:800, color:'#fff', marginBottom:14 }}>Edit Transaction</div>
             <div className="fw" style={{ marginBottom:12 }}>
               <label className="flbl" htmlFor="tx-name">Name</label>
-              <input id="tx-name" className="finput" autoFocus value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
+              <input id="tx-name" className="finput" autoFocus aria-describedby="tx-name-help" value={editForm.name} onChange={e => setEditForm(v => ({ ...v, name: e.target.value }))} />
+              <div id="tx-name-help" style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 12 }}>Leave blank to use the category name.</div>
             </div>
             <div className="fw" style={{ marginBottom:20 }}>
               <label className="flbl" htmlFor="tx-amt">Amount</label>
