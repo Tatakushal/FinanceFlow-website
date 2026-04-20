@@ -400,9 +400,9 @@ select.finput option{background:#111C2D;color:#fff;}
 /* ── NUMPAD ── */
 .add-tx-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;}
 .numpad-section{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-md);padding:24px;}
-.amt-display{text-align:center;padding:16px 0 20px;}
+.amt-display{text-align:center;padding:16px 0 20px;max-width:100%;overflow:hidden;}
 .amt-cur{font-family:var(--fd);font-size:28px;font-weight:700;color:var(--text-muted);vertical-align:top;margin-top:14px;display:inline-block;}
-.amt-val{font-family:var(--fd);font-size:72px;font-weight:800;color:#fff;line-height:1;letter-spacing:-2px;}
+.amt-val{font-family:var(--fd);font-size:clamp(34px,8vw,72px);font-weight:800;color:#fff;line-height:1;letter-spacing:-2px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;}
 .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .nkey{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-sm);padding:18px;text-align:center;font-family:var(--fd);font-size:22px;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;user-select:none;}
 .nkey:hover{background:rgba(255,255,255,.12);}
@@ -565,7 +565,7 @@ select.finput option{background:#111C2D;color:#fff;}
   .chat-layout{grid-template-columns:1fr;height:auto;}
   .chat-layout .chat-box{height:auto !important;min-height:55vh;}
   .chat-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .amt-val{font-size:60px;}
+  .amt-val{font-size:clamp(34px,7vw,60px);}
   .balance-amount{font-size:38px;}
   .budget-rings-actions{justify-content:flex-start;}
 }
@@ -694,7 +694,7 @@ select.finput option{background:#111C2D;color:#fff;}
   .bubble-ai,.bubble-user{max-width:90%;font-size:14px;}
 
   /* Numpad */
-  .amt-val{font-size:52px;}
+  .amt-val{font-size:clamp(30px,12vw,52px);}
   .amt-cur{font-size:22px;margin-top:10px;}
   .nkey{padding:14px;font-size:20px;}
   .cat-grid{grid-template-columns:repeat(3,1fr);}

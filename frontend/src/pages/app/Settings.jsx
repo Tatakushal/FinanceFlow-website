@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../contexts/ToastContext';
-import { setPassword, verifyPassword, getData, saveData } from '../../services/storage';
+import { setPassword, verifyPassword } from '../../services/storage';
 import AppLayout from '../../components/layout/AppLayout';
 
 const ACCENT_COLOURS = [
@@ -30,7 +30,7 @@ const LANGUAGES = ['English','हिंदी','தமிழ்','বাংল�
 // ─── Profile Tab ─────────────────────────────────────────────────────────────
 function ProfileTab() {
   const { user } = useAuth();
-  const { data, save, totals, fmt } = useFinance();
+  const { data, save, totals } = useFinance();
   const { showToast } = useToast();
   const [form, setForm] = useState({ name: data?.name || user?.name || '', mobile: data?.mobile || '' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -230,17 +230,96 @@ function SecurityTab() {
 // ─── Privacy Tab ──────────────────────────────────────────────────────────────
 function PrivacyTab() {
   const { user } = useAuth();
-  const { data, save } = useFinance();
+  const { data, save, fmt } = useFinance();
   const { showToast } = useToast();
 
-  function exportData() {
+  function exportDataAsJson() {
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type:'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `financeflow-export-${Date.now()}.json`;
     a.click(); URL.revokeObjectURL(url);
-    showToast('✅ Data exported!');
+    showToast('✅ Data exported as JSON!');
+  }
+
+  function exportTransactionsAsCsv() {
+    const txs = data?.txs || [];
+    const headers = ['id', 'type', 'name', 'category', 'amount', 'date', 'payment', 'recurring', 'xp'];
+    const escapeCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = txs.map((tx) => [
+      tx?.id ?? '',
+      tx?.type ?? '',
+      tx?.name ?? '',
+      tx?.cat ?? '',
+      Number(tx?.amt) || 0,
+      tx?.date ?? '',
+      tx?.pay ?? '',
+      tx?.recurring ? 'Yes' : 'No',
+      Number(tx?.xp) || 0,
+    ].map(escapeCell).join(','));
+    const csv = `${headers.join(',')}\n${rows.join('\n')}`;
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `financeflow-transactions-${Date.now()}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast('✅ Transactions exported as CSV!');
+  }
+
+  function exportTransactionsAsPdf() {
+    const txs = data?.txs || [];
+    const esc = (v) => String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    const rows = txs.map((tx) => `
+      <tr>
+        <td>${esc(tx?.date)}</td>
+        <td>${esc(tx?.type)}</td>
+        <td>${esc(tx?.name)}</td>
+        <td>${esc(tx?.cat)}</td>
+        <td>${esc(tx?.pay || '-')}</td>
+        <td>${esc(tx?.recurring ? 'Yes' : 'No')}</td>
+        <td style="text-align:right;">${esc(fmt(Number(tx?.amt) || 0))}</td>
+      </tr>
+    `).join('');
+    const win = window.open('', '_blank', 'noopener,noreferrer,width=980,height=720');
+    if (!win) { showToast('Allow pop-ups to export PDF.'); return; }
+    win.document.write(`
+      <!doctype html>
+      <html>
+      <head>
+        <title>FinanceFlow Transactions</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:24px;color:#111;}
+          h1{margin:0 0 8px;font-size:22px;}
+          p{margin:0 0 16px;color:#555;}
+          table{width:100%;border-collapse:collapse;}
+          th,td{border:1px solid #ddd;padding:8px;font-size:12px;}
+          th{background:#f5f5f5;text-align:left;}
+        </style>
+      </head>
+      <body>
+        <h1>FinanceFlow Transactions</h1>
+        <p>Exported on ${new Date().toLocaleString()}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Type</th><th>Name</th><th>Category</th><th>Payment</th><th>Recurring</th><th style="text-align:right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="7">No transactions available.</td></tr>'}</tbody>
+        </table>
+      </body>
+      </html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
+    showToast('✅ PDF export opened. Choose "Save as PDF".');
   }
 
   function clearTransactions() {
@@ -276,7 +355,9 @@ function PrivacyTab() {
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-          <button className="btn btn-p" onClick={exportData}>📦 Export Data</button>
+          <button className="btn btn-p" onClick={exportDataAsJson}>📦 Export JSON</button>
+          <button className="btn btn-s" onClick={exportTransactionsAsCsv}>📄 Export CSV</button>
+          <button className="btn btn-s" onClick={exportTransactionsAsPdf}>🧾 Export PDF</button>
           <button className="btn btn-s" style={{ color:'var(--warn)', borderColor:'rgba(255,107,53,.3)' }} onClick={clearTransactions}>🗑 Clear Transactions</button>
         </div>
       </div>
