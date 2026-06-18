@@ -1,14 +1,20 @@
-import { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo } from 'react';
 import { useFinance } from './FinanceContext';
 
 const ThemeContext = createContext(null);
 
 const THEMES = ['dark', 'light', 'ocean'];
+const DEFAULT_APPEARANCE = {
+  theme: 'dark',
+  accent: '#00E5A0',
+  currency: '₹ INR',
+  language: 'English',
+};
 
 export function ThemeProvider({ children }) {
   const { data, save } = useFinance();
 
-  const appearance = data?.appearance || { theme: 'dark', accent: '#00E5A0', currency: '₹ INR', language: 'English' };
+  const appearance = useMemo(() => data?.appearance || DEFAULT_APPEARANCE, [data]);
 
   // Apply theme to <html> data-theme attribute
   useEffect(() => {

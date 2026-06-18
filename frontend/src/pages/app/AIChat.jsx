@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFinance } from '../../contexts/FinanceContext';
-import { useToast } from '../../contexts/ToastContext';
 import { callFlowAI } from '../../services/api';
 import AppLayout from '../../components/layout/AppLayout';
 
@@ -21,7 +20,6 @@ function buildProfile(user, data, totals) {
 export default function AIChat() {
   const { user } = useAuth();
   const { data, totals, fmt } = useFinance();
-  const { showToast } = useToast();
 
   const [messages, setMessages] = useState([
     { role:'ai', text:'FlowAI is in training — answers may be incomplete. Ask me anything about your finances! ✨' }

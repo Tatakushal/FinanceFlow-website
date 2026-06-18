@@ -1,17 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useToast } from '../../contexts/ToastContext';
 
 export default function Topbar({ showUser = false, actions }) {
-  const { user, signOut } = useAuth();
-  const { showToast } = useToast();
-  const navigate = useNavigate();
-
-  function handleLogout() {
-    signOut();
-    showToast('Signed out. See you soon!');
-    navigate('/');
-  }
+  const { user } = useAuth();
 
   return (
     <div className="topbar">

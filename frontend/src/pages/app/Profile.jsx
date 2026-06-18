@@ -5,7 +5,7 @@ import AppLayout from '../../components/layout/AppLayout';
 
 export default function Profile() {
   const { user } = useAuth();
-  const { data, totals, fmt } = useFinance();
+  const { data, totals } = useFinance();
 
   const score = totals.income > 0 ? Math.min(99, Math.round(50 + parseFloat(totals.rate) * 0.5)) : null;
 
