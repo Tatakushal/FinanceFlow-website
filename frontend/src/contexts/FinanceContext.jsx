@@ -14,7 +14,6 @@ export function FinanceProvider({ children }) {
   const [data, setData] = useState(null);
   const [rev, setRev] = useState(0);
 
-  // Load/reload data whenever the logged-in user changes
   useEffect(() => {
     if (user?.email) {
       setData(getData(user.email));
