@@ -2,15 +2,27 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-};
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+
+async function fetchRuntimeFirebaseConfig() {
+  try {
+    const res = await fetch(`${API_BASE}/config`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.cloudSync?.enabled || !data?.firebase || typeof data.firebase !== 'object') {
+      return null;
+    }
+    return data.firebase;
+  } catch {
+    return null;
+  }
+}
+
+const firebaseConfig = await fetchRuntimeFirebaseConfig();
 
 const requiredKeys = [
   'apiKey',
@@ -21,8 +33,8 @@ const requiredKeys = [
   'appId',
 ];
 
-const hasRequiredConfig = requiredKeys.every((key) => {
-  const value = firebaseConfig[key];
+const hasRequiredConfig = Boolean(firebaseConfig) && requiredKeys.every((key) => {
+  const value = firebaseConfig?.[key];
   return typeof value === 'string' && value.trim().length > 0;
 });
 

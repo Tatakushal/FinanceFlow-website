@@ -111,6 +111,47 @@ function clearAuthRateLimit(action, identity) {
   writeRateLimitState(cleaned);
 }
 
+function sanitizeTextInput(value, { maxLength, fieldName }) {
+  const text = String(value ?? '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .trim();
+  if (!text) throw new Error(`${fieldName} is required.`);
+  if (text.length > maxLength) throw new Error(`${fieldName} is too long.`);
+  return text;
+}
+
+function sanitizeEmail(value) {
+  const email = sanitizeTextInput(value, { maxLength: 254, fieldName: 'Email' }).toLowerCase();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(email)) throw new Error('Enter a valid email.');
+  return email;
+}
+
+function sanitizePassword(value) {
+  const password = String(value ?? '');
+  if (!password.trim()) throw new Error('Password is required.');
+  if (/[\u0000-\u001F\u007F]/.test(password)) throw new Error('Password contains invalid characters.');
+  if (password.length < 6) throw new Error('Password needs at least 6 characters.');
+  if (password.length > 128) throw new Error('Password is too long.');
+  return password;
+}
+
+function sanitizeName(value) {
+  const name = sanitizeTextInput(value, { maxLength: 80, fieldName: 'Name' }).replace(/\s+/g, ' ');
+  if (!/^[\p{L}\p{N}][\p{L}\p{N} .,'-]*$/u.test(name)) {
+    throw new Error('Name contains invalid characters.');
+  }
+  return name;
+}
+
+function sanitizeMobile(value) {
+  const mobile = String(value ?? '').trim();
+  if (!mobile) return '';
+  if (mobile.length > 20) throw new Error('Mobile number is too long.');
+  if (!/^\+?[0-9()\-\s]{7,20}$/.test(mobile)) throw new Error('Enter a valid mobile number.');
+  return mobile;
+}
+
 function getInitialLocalUser() {
   if (auth) return null;
   const localUser = getUser();
@@ -155,13 +196,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = useCallback(async (email, password) => {
-    const e = email.trim().toLowerCase();
+    const e = sanitizeEmail(email);
+    const safePassword = sanitizePassword(password);
     ensureAuthNotRateLimited('signin', e);
     try {
       if (!auth) {
         const name = getAccountName(e);
         if (!name) throw new Error('Invalid email or password.');
-        const ok = await verifyPassword(e, password, { enrollIfMissing: false });
+        const ok = await verifyPassword(e, safePassword, { enrollIfMissing: false });
         if (!ok) throw new Error('Invalid email or password.');
         localLogin(name, e);
         const u = { name, email: e };
@@ -170,7 +212,7 @@ export function AuthProvider({ children }) {
         clearAuthRateLimit('signin', e);
         return u;
       }
-      const cred = await signInWithEmailAndPassword(auth, e, password);
+      const cred = await signInWithEmailAndPassword(auth, e, safePassword);
       const name = cred.user.displayName || e.split('@')[0];
       const uid = cred.user.uid;
       skipNext.current = true;
@@ -196,34 +238,37 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = useCallback(async ({ name, email, password, mobile }) => {
-    const e = email.trim().toLowerCase();
+    const safeName = sanitizeName(name);
+    const e = sanitizeEmail(email);
+    const safePassword = sanitizePassword(password);
+    const safeMobile = sanitizeMobile(mobile);
     ensureAuthNotRateLimited('signup', e);
     try {
       if (!auth) {
-        localSignup(name, e, INITIAL_INCOME);
-        await setPassword(e, password);
-        if (mobile) {
+        localSignup(safeName, e, INITIAL_INCOME);
+        await setPassword(e, safePassword);
+        if (safeMobile) {
           const localData = getData(e);
           if (localData) {
-            localData.mobile = mobile;
+            localData.mobile = safeMobile;
             saveData(e, localData);
           }
         }
-        const u = { name, email: e };
+        const u = { name: safeName, email: e };
         setUserState(u);
         setAuthLoading(false);
         clearAuthRateLimit('signup', e);
         return u;
       }
-      const cred = await createUserWithEmailAndPassword(auth, e, password);
-      await updateProfile(cred.user, { displayName: name });
+      const cred = await createUserWithEmailAndPassword(auth, e, safePassword);
+      await updateProfile(cred.user, { displayName: safeName });
       const uid = cred.user.uid;
       skipNext.current = true;
-      const newData = freshData(name, e, INITIAL_INCOME);
-      if (mobile) newData.mobile = mobile;
+      const newData = freshData(safeName, e, INITIAL_INCOME);
+      if (safeMobile) newData.mobile = safeMobile;
       saveData(e, newData);
       await saveUserData(uid, newData);
-      const u = { name, email: e, uid };
+      const u = { name: safeName, email: e, uid };
       setUserState(u);
       setAuthLoading(false);
       clearAuthRateLimit('signup', e);
@@ -237,11 +282,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const socialLogin = useCallback(async (provider) => {
-    const providerKey = String(provider || '').trim().toLowerCase() || 'social';
+    const providerLabel = String(provider || '').trim();
+    if (providerLabel.length > 20) throw new Error('Invalid sign-in provider.');
+    const providerKey = providerLabel.toLowerCase() || 'social';
     ensureAuthNotRateLimited('signin', providerKey);
     try {
       if (!auth) throw new Error('Social login is currently unavailable. Please try again later.');
-      if (provider !== 'Google') throw new Error('Apple sign-in is not yet supported.');
+      if (providerLabel !== 'Google') throw new Error('Apple sign-in is not yet supported.');
       const cred = await signInWithPopup(auth, new GoogleAuthProvider());
       const email = (cred.user.email || '').toLowerCase();
       const name = cred.user.displayName || email.split('@')[0] || cred.user.uid;

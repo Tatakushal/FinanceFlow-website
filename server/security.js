@@ -3,6 +3,11 @@ const crypto = require("crypto");
 const MAX_BODY_BYTES = 150_000;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT_COUNT = 25;
+const MAX_MESSAGE_CHARS = 1200;
+const MAX_HISTORY_ITEMS = 15;
+const MAX_PROFILE_BYTES = 100_000;
+const MAX_NESTED_DEPTH = 8;
+const MAX_STRING_CHARS = 5_000;
 
 // Prevent memory leak by capping map size in serverless
 const MAX_RATE_ENTRIES = 5000; 
@@ -142,17 +147,66 @@ function validatePayload(body) {
     throw new Error("Invalid generic JSON object payload.");
   }
 
-  const message = String(body?.message || "").trim();
-  if (!message) throw new Error("Message is required.");
-  if (message.length > 1200) throw new Error("Message too long.");
+  const message = body?.message;
+  if (typeof message !== "string") throw new Error("Message must be a string.");
+  const trimmedMessage = message.trim();
+  if (!trimmedMessage) throw new Error("Message is required.");
+  if (trimmedMessage.length > MAX_MESSAGE_CHARS) throw new Error("Message too long.");
+  if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(trimmedMessage)) {
+    throw new Error("Message contains invalid characters.");
+  }
+
+  function isPlainObject(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+  }
+
+  function hasUnsafeKeys(value, depth = 0) {
+    if (depth > MAX_NESTED_DEPTH) return true;
+    if (Array.isArray(value)) {
+      return value.some((entry) => hasUnsafeKeys(entry, depth + 1));
+    }
+    if (!value || typeof value !== "object") return false;
+    for (const [key, entry] of Object.entries(value)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") return true;
+      if (hasUnsafeKeys(entry, depth + 1)) return true;
+    }
+    return false;
+  }
+
+  function validateNestedValues(value, depth = 0) {
+    if (depth > MAX_NESTED_DEPTH) throw new Error("Payload nesting is too deep.");
+    if (value === null || value === undefined) return;
+    if (typeof value === "string") {
+      if (value.length > MAX_STRING_CHARS) throw new Error("Payload string value is too long.");
+      if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(value)) {
+        throw new Error("Payload contains invalid characters.");
+      }
+      return;
+    }
+    if (typeof value === "number" || typeof value === "boolean") return;
+    if (Array.isArray(value)) {
+      for (const item of value) validateNestedValues(item, depth + 1);
+      return;
+    }
+    if (!isPlainObject(value)) throw new Error("Payload contains malformed objects.");
+    for (const entry of Object.values(value)) {
+      validateNestedValues(entry, depth + 1);
+    }
+  }
 
   // Extremely strict profile validation to prevent injection of 'role' or deep objects
   if (body?.profile !== undefined) {
-    if (!body.profile || typeof body.profile !== "object" || Array.isArray(body.profile)) {
+    if (!isPlainObject(body.profile)) {
       throw new Error("Profile must be an exact object.");
     }
+    if (hasUnsafeKeys(body.profile)) {
+      throw new Error("Unsafe keys detected in user profile payload.");
+    }
     const profileBytes = Buffer.byteLength(JSON.stringify(body.profile), "utf8");
-    if (profileBytes > 100_000) throw new Error("Profile payload too large.");
+    if (profileBytes > MAX_PROFILE_BYTES) throw new Error("Profile payload too large.");
+    validateNestedValues(body.profile);
     
     // Disallow overriding critical keys explicitly
     if ("role" in body.profile || "admin" in body.profile) {
@@ -162,7 +216,24 @@ function validatePayload(body) {
 
   if (body?.history !== undefined) {
     if (!Array.isArray(body.history)) throw new Error("History must be an array.");
-    if (body.history.length > 15) throw new Error("History array too long.");
+    if (body.history.length > MAX_HISTORY_ITEMS) throw new Error("History array too long.");
+    for (const item of body.history) {
+      if (typeof item === "string") {
+        if (!item.trim()) throw new Error("History items cannot be empty.");
+        if (item.length > MAX_MESSAGE_CHARS) throw new Error("History item too long.");
+        continue;
+      }
+      if (!isPlainObject(item)) throw new Error("History entries must be strings or objects.");
+      if (hasUnsafeKeys(item)) throw new Error("Unsafe keys detected in history payload.");
+      const role = String(item.role || "").trim().toLowerCase();
+      if (role && !["user", "assistant", "system"].includes(role)) {
+        throw new Error("History role is invalid.");
+      }
+      const content = String(item.content ?? item.message ?? "").trim();
+      if (!content) throw new Error("History content is required.");
+      if (content.length > MAX_MESSAGE_CHARS) throw new Error("History content too long.");
+      validateNestedValues(item);
+    }
   }
 }
 
