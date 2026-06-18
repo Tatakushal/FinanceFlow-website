@@ -225,9 +225,18 @@ function validatePayload(body) {
       }
       if (!isPlainObject(item)) throw new Error("History entries must be strings or objects.");
       if (hasUnsafeKeys(item)) throw new Error("Unsafe keys detected in history payload.");
+      if (item.role !== undefined && typeof item.role !== "string") {
+        throw new Error("History role must be a string.");
+      }
       const role = String(item.role || "").trim().toLowerCase();
       if (role && !["user", "assistant", "system"].includes(role)) {
         throw new Error("History role is invalid.");
+      }
+      if (
+        (item.content !== undefined && typeof item.content !== "string") ||
+        (item.message !== undefined && typeof item.message !== "string")
+      ) {
+        throw new Error("History content must be a string.");
       }
       const content = String(item.content ?? item.message ?? "").trim();
       if (!content) throw new Error("History content is required.");

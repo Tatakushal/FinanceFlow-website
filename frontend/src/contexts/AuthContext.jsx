@@ -28,6 +28,7 @@ const INITIAL_INCOME = 0;
 const AUTH_RATE_LIMIT_MAX_ATTEMPTS = 5;
 const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_RATE_LIMIT_STORAGE_KEY = 'ff_auth_rate_limit_v1';
+const MS_PER_MINUTE = 60_000;
 
 class AuthRateLimitError extends Error {
   constructor(message) {
@@ -80,7 +81,7 @@ function ensureAuthNotRateLimited(action, identity) {
   if (!current || current.count < AUTH_RATE_LIMIT_MAX_ATTEMPTS) return;
 
   const retryMs = Math.max(1, current.resetAt - now);
-  const retryMin = Math.ceil(retryMs / 60000);
+  const retryMin = Math.ceil(retryMs / MS_PER_MINUTE);
   throw new AuthRateLimitError(`Too many attempts. Try again in ${retryMin} minute(s).`);
 }
 
@@ -115,10 +116,8 @@ function sanitizeTextInput(value, { maxLength, fieldName }) {
   const text = String(value ?? '').trim();
   if (!text) throw new Error(`${fieldName} is required.`);
   if (text.length > maxLength) throw new Error(`${fieldName} is too long.`);
-  for (let i = 0; i < text.length; i += 1) {
-    const code = text.charCodeAt(i);
-    const isInvalidControl = (code >= 0 && code <= 31 && code !== 9 && code !== 10 && code !== 13) || code === 127;
-    if (isInvalidControl) throw new Error(`${fieldName} contains invalid characters.`);
+  if (hasInvalidControlChars(text, { allowLineBreaks: true })) {
+    throw new Error(`${fieldName} contains invalid characters.`);
   }
   return text;
 }
@@ -133,15 +132,21 @@ function sanitizeEmail(value) {
 function sanitizePassword(value) {
   const password = String(value ?? '');
   if (!password.trim()) throw new Error('Password is required.');
-  for (let i = 0; i < password.length; i += 1) {
-    const code = password.charCodeAt(i);
-    if ((code >= 0 && code <= 31) || code === 127) {
-      throw new Error('Password contains invalid characters.');
-    }
-  }
+  if (hasInvalidControlChars(password)) throw new Error('Password contains invalid characters.');
   if (password.length < 6) throw new Error('Password needs at least 6 characters.');
   if (password.length > 128) throw new Error('Password is too long.');
   return password;
+}
+
+function hasInvalidControlChars(value, { allowLineBreaks = false } = {}) {
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    const allowedWhitespace = allowLineBreaks && (code === 9 || code === 10 || code === 13);
+    if ((code <= 31 && !allowedWhitespace) || code === 127) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function sanitizeName(value) {
