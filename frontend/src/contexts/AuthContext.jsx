@@ -112,11 +112,14 @@ function clearAuthRateLimit(action, identity) {
 }
 
 function sanitizeTextInput(value, { maxLength, fieldName }) {
-  const text = String(value ?? '')
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
-    .trim();
+  const text = String(value ?? '').trim();
   if (!text) throw new Error(`${fieldName} is required.`);
   if (text.length > maxLength) throw new Error(`${fieldName} is too long.`);
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    const isInvalidControl = (code >= 0 && code <= 31 && code !== 9 && code !== 10 && code !== 13) || code === 127;
+    if (isInvalidControl) throw new Error(`${fieldName} contains invalid characters.`);
+  }
   return text;
 }
 
@@ -130,7 +133,12 @@ function sanitizeEmail(value) {
 function sanitizePassword(value) {
   const password = String(value ?? '');
   if (!password.trim()) throw new Error('Password is required.');
-  if (/[\u0000-\u001F\u007F]/.test(password)) throw new Error('Password contains invalid characters.');
+  for (let i = 0; i < password.length; i += 1) {
+    const code = password.charCodeAt(i);
+    if ((code >= 0 && code <= 31) || code === 127) {
+      throw new Error('Password contains invalid characters.');
+    }
+  }
   if (password.length < 6) throw new Error('Password needs at least 6 characters.');
   if (password.length > 128) throw new Error('Password is too long.');
   return password;
